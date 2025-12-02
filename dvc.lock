@@ -21,3 +21,30 @@ stages:
       hash: md5
       md5: 7ad1a90a1576d5dd099d80ad6e7254b1
       size: 1033643029
+  hyperopt:
+    cmd: python src/training/hyperopt_search.py --max-evals 10
+    deps:
+    - path: data/processed/train_data_s1.pt
+      hash: md5
+      md5: 7ad1a90a1576d5dd099d80ad6e7254b1
+      size: 1033643029
+    - path: src/models/architecture.py
+      hash: md5
+      md5: d20737d55975392a696975519aeba468
+      size: 4593
+    - path: src/training/hyperopt_search.py
+      hash: md5
+      md5: f2e094605b95d77d4237ededc06fa450
+      size: 10901
+    - path: src/training/loops.py
+      hash: md5
+      md5: 998eae951fbb313b799927bcffda83ee
+      size: 6049
+    params:
+      params.yaml:
+        hyperopt.max_evals: 10
+    outs:
+    - path: src/training/hyperopt_params.json
+      hash: md5
+      md5: 4deab630c9945a9e6c9d9c20fbc93b48
+      size: 210
