@@ -110,6 +110,7 @@ def main():
     """Pipeline d'entraînement"""
     print(f" Device: {DEVICE}")
     print(f" ROOT_DIR: {ROOT_DIR}")
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
     hyperopt_params = load_hyperopt_params()
     
     if hyperopt_params:
@@ -121,11 +122,11 @@ def main():
         dropout = hyperopt_params.get('dropout', 0.3)
     else:
         BATCH_SIZE = 32
-        lr = 1e-3
-        weight_decay = 1e-4
+        lr = 5e-3
+        weight_decay = 5e-4
         glasses_weight = 2.0
         hair_color_weight = 0.8
-        dropout = 0.3
+        dropout = 0.4
 
     # Charger les données prétraitées si elles existent
     processed_data_path = "data/processed/train_data_s1.pt"
@@ -149,9 +150,15 @@ def main():
     
     # Transforms
     train_transforms = transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(15),  # ← Augmenté
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),  # ← NOUVEAU
+        transforms.RandomErasing(p=0.1),  # ← NOUVEAU (masque aléatoire)
+
     ])
+
+
+    
     
     # Datasets
     train_dataset = ImageDataset(X_train, y_train, transform=train_transforms, is_preprocessed=True)
@@ -181,14 +188,18 @@ def main():
     # Optimizer
     optimizer = torch.optim.AdamW(
         model.parameters(), 
-        lr=lr, 
-        weight_decay=weight_decay
+        lr=lr,
+        weight_decay=weight_decay,
+        betas=(0.9, 0.999),
+        eps=1e-8
     )
     
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer, 
-        T_0=10, 
-        T_mult=2
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=0.5,  # Divise par 2 le LR
+        patience=3,  # Attend 3 epochs sans amélioration
+        min_lr=1e-6,
     )
     
 
@@ -211,8 +222,6 @@ def main():
             "optimizer": "AdamW",
             "lr": lr,
             "weight_decay": weight_decay,
-            "glasses_weight": glasses_weight,
-            "hair_color_weight": hair_color_weight,
             "dropout": dropout,
             "scheduler": "CosineAnnealingWarmRestarts",
             "patience": 5,
@@ -222,17 +231,18 @@ def main():
             "train_size": len(train_dataset),
             "val_size": len(val_dataset)
         })
+
         
         # Log model architecture as text
         with open('model_summary.txt', 'w') as f:
             f.write(str(model))
             f.write(f"\n\nTotal parameters: {sum(p.numel() for p in model.parameters()):,}\n")
             f.write(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}\n")
-        mlflow.log_artifact('model_summary.txt')
+        mlflow.log_artifacts('.', artifact_path='model_info')  # ✅ Nouvelle API
         
         best_val_loss = float('inf')
         best_epoch = 0
-        patience = 5
+        patience = 7
         patience_counter = 0
         
         print("\n Début de l'entraînement...\n")
@@ -257,7 +267,7 @@ def main():
                 acc_history[k].append(val_accs[k])
             
             # Scheduler step
-            scheduler.step(epoch)
+            scheduler.step(val_loss)
             
             # Log to MLflow
             mlflow.log_metric("train_loss", train_loss, step=epoch)
@@ -289,36 +299,51 @@ def main():
             
             # Save best model
             if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                best_epoch = epoch
-                patience_counter = 0
+                    improvement = best_val_loss - val_loss
+                    if improvement > 0.001:  # Au moins 0.1% d'amélioration
+                        best_val_loss = val_loss
+                        best_epoch = epoch
+                        patience_counter = 0
+                        
+                        os.makedirs('models', exist_ok=True)
+                        torch.save({
+                            'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler_state_dict': scheduler.state_dict(),
+                            'val_loss': val_loss,
+                            'val_accs': val_accs,
+                            'train_loss': train_loss
+                        }, 'models/best_model.pth')
                 
-                os.makedirs('models', exist_ok=True)
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'val_loss': val_loss,
-                    'val_accs': val_accs,
-                    'train_loss': train_loss
-                }, 'models/best_model.pth')
-                
-                mlflow.pytorch.log_model(model, "best_model")
-                print(f"\n Nouveau meilleur modèle sauvegardé!")
+                        print(f"\n Nouveau meilleur modèle! Amélioration: {improvement:.4f}")
+
+                    else:
+                        patience_counter += 1
+                        print(f"\n Amélioration < 0.001, patience: {patience_counter}/{patience}")
             else:
                 patience_counter += 1
-                print(f"\n Patience: {patience_counter}/{patience}")
-                if patience_counter >= patience:
-                    print(f"\n Early stopping à l'epoch {epoch}")
+                print(f"\n Pas d'amélioration, patience: {patience_counter}/{patience}")
+            
+            if train_loss < 0.1 and val_loss > 1.0:
+                    print(f"\n OVERFITTING DÉTECTÉ!")
+                    print(f"   Train Loss: {train_loss:.4f}")
+                    print(f"   Val Loss: {val_loss:.4f}")
+                    print(f"   Arrêt précoce")
+                    
                     break
-        
+            
+            if patience_counter >= patience:
+                    print(f"\n Early stopping à l'epoch {epoch}")
+                    
+                    break
         # Générer et logger les graphiques
         print(f"\n Génération des graphiques...")
         plot_training_curves(train_losses_history, val_losses_history, 'training_curves.png')
-        mlflow.log_artifact('training_curves.png')
+        mlflow.log_artifacts('.', artifact_path='plots')  # Log tous les .png
         
         plot_accuracy_curves(acc_history, 'accuracy_curves.png')
-        mlflow.log_artifact('accuracy_curves.png')
+        mlflow.log_artifacts('.', artifact_path='plots')  # Log tous les .png
         
         print(f"\n{'='*60}")
         print(" Entraînement terminé!")
@@ -341,12 +366,12 @@ def main():
         with open('metrics/train_metrics.json', 'w') as f:
             json.dump(final_metrics, f, indent=2)
         
-        mlflow.log_artifact('metrics/train_metrics.json')
+        mlflow.log_artifacts('metrics', artifact_path='metrics')
         
         # Log final metrics summary
-        mlflow.log_metric("final_best_val_loss", best_val_loss)
-        mlflow.log_metric("final_avg_accuracy", sum(val_accs.values()) / len(val_accs))
-        mlflow.log_metric("total_epochs", epoch)
+        mlflow.log_metric("final_best_val_loss", float(best_val_loss))
+        mlflow.log_metric("final_avg_accuracy", float(sum(val_accs.values()) / len(val_accs)))
+        mlflow.log_metric("total_epochs", int(epoch))
 
 if __name__ == '__main__':
     main()

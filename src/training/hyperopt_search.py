@@ -1,6 +1,6 @@
 """
 Script d'optimisation des hyperparamètres avec Hyperopt
-Séparé du pipeline d'entraînement principal
+Utilise les données prétraitées de DVC (déjà normalisées)
 """
 import os
 import sys
@@ -11,7 +11,6 @@ import numpy as np
 from hyperopt import hp, fmin, tpe, Trials, STATUS_OK
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-import torchvision.transforms as transforms
 
 # Ajouter le répertoire racine au PYTHONPATH
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -26,10 +25,10 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Espace de recherche des hyperparamètres
 SEARCH_SPACE = {
-    'lr': hp.loguniform('lr', np.log(1e-5), np.log(1e-2)),
-    'batch_size': hp.choice('batch_size', [16, 32, 64]),
-    'weight_decay': hp.loguniform('weight_decay', np.log(1e-6), np.log(1e-3)),
-    'dropout': hp.uniform('dropout', 0.1, 0.5),
+    'lr': hp.loguniform('lr', np.log(1e-5), np.log(5e-3)),
+    'batch_size': hp.choice('batch_size', [32, 64]),  # Retiré 128 (trop pour GPU)
+    'weight_decay': hp.loguniform('weight_decay', np.log(1e-4), np.log(5e-3)),
+    'dropout': hp.uniform('dropout', 0.1, 0.6),
     'glasses_weight': hp.uniform('glasses_weight', 1.5, 3.0),
     'hair_color_weight': hp.uniform('hair_color_weight', 0.5, 1.2),
 }
@@ -37,18 +36,50 @@ SEARCH_SPACE = {
 # Variable globale pour le compteur de trials
 trial_counter = {'count': 0}
 
+
+
+_cached_data = None
+
 def load_data():
-    """Charge les données prétraitées"""
+    """ Charge les données prétraitées UNE SEULE FOIS"""
+    global _cached_data
+    
+    if _cached_data is not None:
+        print(f"  Utilisation des données en cache")
+        return _cached_data
+    
     processed_data_path = "data/processed/train_data_s1.pt"
     
     if not os.path.exists(processed_data_path):
-        raise FileNotFoundError(f"Exécutez d'abord: dvc repro prepare_train")
+        raise FileNotFoundError(
+            f" Données prétraitées introuvables: {processed_data_path}\n"
+            f"   Exécutez d'abord: dvc repro prepare_train"
+        )
     
+    print(f" Chargement des données prétraitées de DVC...")
     data = torch.load(processed_data_path)
+    
     X = data['X'].numpy()
     y = data['y'].numpy()
     
-    return train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f" {len(X)} images chargées")
+    print(f"   X shape: {X.shape}")
+    print(f"   y shape: {y.shape}")
+    
+
+    
+    # Split et cache
+    _cached_data = train_test_split(X, y, test_size=0.2, random_state=42)
+    return _cached_data
+
+def cleanup_cuda():
+    """🔥 Nettoie complètement le GPU"""
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        # Force garbage collection
+        import gc
+        gc.collect()
 
 def objective(params):
     """Fonction objectif pour Hyperopt"""
@@ -62,23 +93,40 @@ def objective(params):
         print(f"  {k}: {v:.6f}" if isinstance(v, float) else f"  {k}: {v}")
     print(f"{'='*60}\n")
     
-    # Charger les données
+    # Charger les données prétraitées
     X_train, X_val, y_train, y_val = load_data()
     
-    # Transforms
-    train_transforms = transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-    ])
-    
-    # Datasets
-    train_dataset = ImageDataset(X_train, y_train, transform=train_transforms, is_preprocessed=True)
-    val_dataset = ImageDataset(X_val, y_val, transform=None, is_preprocessed=True)
+
+    # Datasets avec is_preprocessed=True (pas de conversion PIL)
+    train_dataset = ImageDataset(
+        X_train, 
+        y_train, 
+        transform=None,  #  Pas de transform, déjà prétraité
+        is_preprocessed=True
+    )
+    val_dataset = ImageDataset(
+        X_val, 
+        y_val, 
+        transform=None,
+        is_preprocessed=True
+    )
     
     # DataLoaders
     batch_size = params['batch_size']
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=batch_size, 
+        shuffle=True, 
+        num_workers=2,
+        pin_memory=True
+    )
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        num_workers=2,
+        pin_memory=True
+    )
     
     # Modèle avec dropout variable
     model = CustomMultiHeadCNN(
@@ -91,7 +139,9 @@ def objective(params):
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=params['lr'],
-        weight_decay=params['weight_decay']
+        weight_decay=params['weight_decay'],
+        betas=(0.9, 0.999),
+        eps=1e-8
     )
     
     # Entraînement rapide (3 epochs pour hyperopt)
@@ -99,7 +149,6 @@ def objective(params):
     best_val_loss = float('inf')
     best_val_accs = {}
     
-    #  NESTED RUN dans MLflow pour chaque trial
     with mlflow.start_run(nested=True, run_name=f"trial_{trial_num:03d}"):
         # Log les hyperparamètres testés
         print(f" Logging params to MLflow...")
@@ -115,28 +164,44 @@ def objective(params):
         print(f" Entraînement du trial {trial_num} ({QUICK_EPOCHS} epochs)...\n")
         
         for epoch in range(1, QUICK_EPOCHS + 1):
-            train_loss = train_one_epoch(model, train_loader, optimizer, DEVICE, epoch)
-            val_loss, val_accs = validate(model, val_loader, DEVICE)
-            
-            # Log metrics par epoch
-            mlflow.log_metric("train_loss", float(train_loss), step=epoch)
-            mlflow.log_metric("val_loss", float(val_loss), step=epoch)
-            mlflow.log_metric("learning_rate", float(optimizer.param_groups[0]['lr']), step=epoch)
-            
-            for k, v in val_accs.items():
-                mlflow.log_metric(f"acc_{k}", float(v), step=epoch)
-            
-            # Moyenne des accuracies
-            avg_acc = sum(val_accs.values()) / len(val_accs)
-            mlflow.log_metric("avg_accuracy", float(avg_acc), step=epoch)
-            
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                best_val_accs = val_accs.copy()
+            try:
+                # Train
+                train_loss = train_one_epoch(model, train_loader, optimizer, DEVICE, epoch)
+                
+                # Validate
+                val_loss, val_accs = validate(model, val_loader, DEVICE)
+                
+                # Log metrics par epoch
+                mlflow.log_metric("train_loss", float(train_loss), step=epoch)
+                mlflow.log_metric("val_loss", float(val_loss), step=epoch)
+                mlflow.log_metric("learning_rate", float(optimizer.param_groups[0]['lr']), step=epoch)
+                
+                for k, v in val_accs.items():
+                    mlflow.log_metric(f"acc_{k}", float(v), step=epoch)
+                
+                # Moyenne des accuracies
+                avg_acc = sum(val_accs.values()) / len(val_accs)
+                mlflow.log_metric("avg_accuracy", float(avg_acc), step=epoch)
+                
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    best_val_accs = val_accs.copy()
+                    
+            except RuntimeError as e:
+                #  Gestion des erreurs CUDA
+                if "CUDA" in str(e) or "out of memory" in str(e).lower():
+                    print(f" CUDA ERROR dans le trial {trial_num}: {e}")
+                    print(f"   Réinitialisation du GPU...")
+                    torch.cuda.empty_cache()
+                    # Retourner une très mauvaise loss pour que Hyperopt évite ces params
+                    mlflow.log_metric("cuda_error", 1.0)
+                    return {'loss': 999.0, 'status': STATUS_OK}
+                else:
+                    raise
         
-        # Métrique combinée: val_loss + pénalité si acc glasses < 0.7
+        #  Métrique combinée: val_loss + pénalité si acc glasses < 0.7
         penalty = 0
-        if best_val_accs['glasses'] < 0.70:
+        if 'glasses' in best_val_accs and best_val_accs['glasses'] < 0.70:
             penalty = (0.70 - best_val_accs['glasses']) * 2.0
         
         objective_metric = best_val_loss + penalty
@@ -147,11 +212,14 @@ def objective(params):
         mlflow.log_metric("penalty", float(penalty))
         
         # Log summary des accuracies finales
-        best_avg_acc = sum(best_val_accs.values()) / len(best_val_accs)
-        mlflow.log_metric("best_avg_accuracy", float(best_avg_acc))
-        
-        for k, v in best_val_accs.items():
-            mlflow.log_metric(f"best_acc_{k}", float(v))
+        if best_val_accs:
+            best_avg_acc = sum(best_val_accs.values()) / len(best_val_accs)
+            mlflow.log_metric("best_avg_accuracy", float(best_avg_acc))
+            
+            for k, v in best_val_accs.items():
+                mlflow.log_metric(f"best_acc_{k}", float(v))
+        else:
+            best_avg_acc = 0.0
         
         print(f"\n{'='*60}")
         print(f" RÉSULTATS TRIAL #{trial_num}")
@@ -160,9 +228,12 @@ def objective(params):
         print(f"   Objective:      {objective_metric:.4f}")
         print(f"   Penalty:        {penalty:.4f}")
         print(f"   Avg Accuracy:   {best_avg_acc:.4f} ({best_avg_acc*100:.1f}%)")
-        print(f"\n   Accuracies finales:")
-        for k, v in best_val_accs.items():
-            print(f"     {k:12}: {v:.4f} ({v*100:.1f}%)")
+        
+        if best_val_accs:
+            print(f"\n   Accuracies finales:")
+            for k, v in best_val_accs.items():
+                print(f"     {k:12}: {v:.4f} ({v*100:.1f}%)")
+        
         print(f"{'='*60}\n")
     
     return {'loss': objective_metric, 'status': STATUS_OK}
@@ -187,8 +258,8 @@ def run_hyperopt(max_evals=20):
     
     # RUN PARENT qui contient tous les trials
     with mlflow.start_run(run_name=f"hyperopt_search_{max_evals}_trials") as parent_run:
-        print(f"  MLflow parent run ID: {parent_run.info.run_id}")
-        print(f"  MLflow parent run name: {parent_run.info.run_name}\n")
+        print(f" MLflow parent run ID: {parent_run.info.run_id}")
+        print(f" MLflow parent run name: {parent_run.info.run_name}\n")
         
         # Log params du parent
         mlflow.log_param("max_evals", max_evals)
@@ -198,10 +269,10 @@ def run_hyperopt(max_evals=20):
         
         # Log l'espace de recherche
         search_space_str = {
-            'lr': 'loguniform(1e-5, 1e-2)',
-            'batch_size': 'choice([16, 32, 64])',
-            'weight_decay': 'loguniform(1e-6, 1e-3)',
-            'dropout': 'uniform(0.1, 0.5)',
+            'lr': 'loguniform(1e-5, 5e-3)',
+            'batch_size': 'choice([32, 64])',
+            'weight_decay': 'loguniform(1e-4, 5e-3)',
+            'dropout': 'uniform(0.3, 0.6)',
             'glasses_weight': 'uniform(1.5, 3.0)',
             'hair_color_weight': 'uniform(0.5, 1.2)'
         }
@@ -221,22 +292,23 @@ def run_hyperopt(max_evals=20):
             verbose=True
         )
         
-        # Convertir les indices en valeurs réelles
+        #  Convertir les indices en valeurs réelles
         if 'batch_size' in best_params:
-            best_params['batch_size'] = [16, 32, 64][int(best_params['batch_size'])]
+            best_params['batch_size'] = [32, 64][int(best_params['batch_size'])]
         
         # Sauvegarder les meilleurs paramètres
         os.makedirs('src/training', exist_ok=True)
         with open('src/training/hyperopt_params.json', 'w') as f:
             json.dump(best_params, f, indent=2)
         
-        mlflow.log_artifact('src/training/hyperopt_params.json')
+        # Log artifact (nouvelle API)
+        mlflow.log_artifacts('src/training', artifact_path='best_params')
         
         # Log les meilleurs params dans le run parent
         for k, v in best_params.items():
             mlflow.log_param(f"best_{k}", v)
         
-        # Log statistiques de l'optimisation
+        #  Log statistiques de l'optimisation
         all_losses = [trial['result']['loss'] for trial in trials.trials]
         best_loss = min(all_losses)
         worst_loss = max(all_losses)
@@ -268,7 +340,6 @@ def run_hyperopt(max_evals=20):
         
         print(f"\n Sauvegardés dans: src/training/hyperopt_params.json")
         print(f" Lancez maintenant: dvc repro train")
-        print(f" Voir les résultats: mlflow ui")
         print(f"{'='*60}\n")
         
         return best_params
