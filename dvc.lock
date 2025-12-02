@@ -1,0 +1,23 @@
+schema: '2.0'
+stages:
+  prepare_train:
+    cmd: python src/data/make_dataset.py
+    deps:
+    - path: data/annotations/mapped_train.csv
+      hash: md5
+      md5: 422899aaa9827d453568c6e364ad67f4
+      size: 503589
+    - path: data/raw/
+      hash: md5
+      md5: 813b2afa3d7eb385c22db2206ded0da2.dir
+      size: 6684981894
+      nfiles: 69075
+    - path: src/data/make_dataset.py
+      hash: md5
+      md5: fd84b37969fb86cdef08ff691dd2efc7
+      size: 2863
+    outs:
+    - path: data/processed/train_data_s1.pt
+      hash: md5
+      md5: 116289d80ebded9e93e54c3035db2961
+      size: 781662805
