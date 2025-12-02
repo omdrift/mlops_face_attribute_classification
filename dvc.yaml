@@ -1,0 +1,38 @@
+stages:
+  prepare_train:
+    cmd: python src/data/make_dataset.py
+    deps:
+      - data/raw
+      - data/annotations/mapped_train.csv
+      - src/data/make_dataset.py
+    outs:
+      - data/processed/train_data_s1.pt
+
+  hyperopt:
+    cmd: python src/training/hyperopt_search.py --max-evals 10
+    deps:
+      - data/processed/train_data_s1.pt
+      - src/training/hyperopt_search.py
+      - src/models/architecture.py
+      - src/training/loops.py
+    params:
+      - hyperopt.max_evals
+    outs:
+      - src/training/hyperopt_params.json
+
+  train:
+    cmd: python src/training/train.py
+    deps:
+      - data/processed/train_data_s1.pt
+      - src/training/train.py
+      - src/training/hyperopt_params.json  # Dépend du résultat de hyperopt
+      - src/models/architecture.py
+      - src/training/loops.py
+    params:
+      - train.epochs
+      - train.batch_size
+    outs:
+      - models/best_model.pth
+    metrics:
+      - metrics/train_metrics.json:
+          cache: false
