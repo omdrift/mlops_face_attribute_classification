@@ -1,0 +1,91 @@
+groups:
+  - name: mlops_alerts
+    interval: 30s
+    rules:
+      # High API latency
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(api_request_latency_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is {{ $value }}s (threshold: 1.0s)"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(api_requests_total{status=~"5.."}[5m]) / rate(api_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Model drift detected
+      - alert: ModelDriftDetected
+        expr: drift_score > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "Model drift detected for {{ $labels.attribute }}"
+          description: "Drift score is {{ $value }} (threshold: 0.2)"
+
+      # Low model accuracy
+      - alert: LowModelAccuracy
+        expr: model_accuracy < 0.80
+        for: 15m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "Low accuracy for {{ $labels.attribute }}"
+          description: "Accuracy is {{ $value }} (threshold: 0.80)"
+
+      # High inference latency
+      - alert: HighInferenceLatency
+        expr: histogram_quantile(0.95, rate(model_inference_latency_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "High model inference latency"
+          description: "95th percentile inference time is {{ $value }}s (threshold: 0.1s)"
+
+      # Prometheus down
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: monitoring
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus has been down for more than 2 minutes"
+
+      # API down
+      - alert: APIDown
+        expr: up{job="mlops-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "MLOps API is down"
+          description: "API has been unreachable for more than 2 minutes"
+
+      # High drift alert rate
+      - alert: HighDriftAlertRate
+        expr: rate(drift_alerts_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: monitoring
+        annotations:
+          summary: "High rate of drift alerts"
+          description: "Drift alerts rate is {{ $value }} per second"

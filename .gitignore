@@ -18,3 +18,26 @@ venv/*.zip
 *.zip
 .dvc/
 venv/
+
+# Airflow
+airflow/logs/
+airflow/*.db
+airflow/*.pid
+airflow/*.cfg
+airflow/airflow-webserver.pid
+
+# Monitoring reports
+reports/evidently/*.html
+reports/evidently/*.json
+
+# Grafana
+monitoring/grafana/data/
+
+# Prometheus
+monitoring/prometheus/data/
+
+# Temporary files
+*.tmp
+.pytest_cache/
+.coverage
+htmlcov/

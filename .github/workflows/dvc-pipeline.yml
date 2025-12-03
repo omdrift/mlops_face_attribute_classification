@@ -1,0 +1,148 @@
+name: DVC Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'DVC stage to run (leave empty for full pipeline)'
+        required: false
+        default: ''
+
+jobs:
+  setup-dvc:
+    name: Setup DVC
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install DVC
+        run: |
+          python -m pip install --upgrade pip
+          pip install dvc dvc-gdrive
+
+      - name: Configure DVC remote
+        env:
+          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
+        run: |
+          if [ -n "$DVC_REMOTE_URL" ]; then
+            dvc remote modify origin url $DVC_REMOTE_URL
+          fi
+
+  pull-data:
+    name: Pull Data
+    runs-on: ubuntu-latest
+    needs: setup-dvc
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install DVC
+        run: |
+          pip install dvc dvc-gdrive
+
+      - name: Pull data from remote
+        run: |
+          dvc pull || echo "DVC pull failed - using local data"
+
+      - name: Cache data
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/processed/
+            data/raw/
+          key: dvc-data-${{ github.sha }}
+
+  run-pipeline:
+    name: Run DVC Pipeline
+    runs-on: ubuntu-latest
+    needs: pull-data
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore data cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/processed/
+            data/raw/
+          key: dvc-data-${{ github.sha }}
+
+      - name: Run DVC pipeline
+        run: |
+          if [ -n "${{ github.event.inputs.stage }}" ]; then
+            echo "Running specific stage: ${{ github.event.inputs.stage }}"
+            dvc repro ${{ github.event.inputs.stage }}
+          else
+            echo "Running full pipeline"
+            dvc repro
+          fi
+
+      - name: Show metrics
+        run: |
+          dvc metrics show
+
+  push-results:
+    name: Push Results
+    runs-on: ubuntu-latest
+    needs: run-pipeline
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install DVC
+        run: |
+          pip install dvc dvc-gdrive
+
+      - name: Push results to remote
+        env:
+          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
+        run: |
+          if [ -n "$DVC_REMOTE_URL" ]; then
+            dvc push || echo "DVC push failed"
+          else
+            echo "No DVC remote configured - skipping push"
+          fi
+
+      - name: Commit DVC lock file
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add dvc.lock
+          git diff --staged --quiet || git commit -m "Update dvc.lock [skip ci]"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
