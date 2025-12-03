@@ -16,7 +16,8 @@ from airflow.utils.task_group import TaskGroup
 import os
 
 # Configuration du projet
-PROJECT_DIR = os.getenv('PROJECT_DIR', '/home/runner/work/mlops_face_attribute_classification/mlops_face_attribute_classification')
+# Use current directory by default, can be overridden with PROJECT_DIR env var
+PROJECT_DIR = os.getenv('PROJECT_DIR', os.getcwd())
 
 # Arguments par défaut pour le DAG
 default_args = {

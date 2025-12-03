@@ -13,8 +13,9 @@ import json
 import os
 
 # Configuration
-PROJECT_DIR = os.getenv('PROJECT_DIR', '/home/runner/work/mlops_face_attribute_classification/mlops_face_attribute_classification')
-ACCURACY_THRESHOLD = 0.85  # Seuil de performance minimal
+# Use current directory by default, can be overridden with PROJECT_DIR env var
+PROJECT_DIR = os.getenv('PROJECT_DIR', os.getcwd())
+ACCURACY_THRESHOLD = float(os.getenv('ACCURACY_THRESHOLD', '0.85'))  # Seuil de performance minimal
 
 default_args = {
     'owner': 'mlops-team',

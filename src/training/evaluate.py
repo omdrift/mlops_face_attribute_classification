@@ -171,9 +171,31 @@ def plot_roc_curves(all_preds, all_labels, save_path='plots/roc_curves.png'):
 
 def main():
     """Fonction principale d'évaluation"""
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Évaluation du modèle')
+    parser.add_argument('--model-path', type=str, default='models/best_model.pth',
+                       help='Chemin vers le modèle entraîné')
+    parser.add_argument('--data-path', type=str, default='data/processed/train_data_s1.pt',
+                       help='Chemin vers les données')
+    parser.add_argument('--test-split', type=float, default=0.2,
+                       help='Proportion de données pour le test (default: 0.2)')
+    parser.add_argument('--batch-size', type=int, default=64,
+                       help='Taille du batch pour l\'évaluation')
+    parser.add_argument('--random-seed', type=int, default=42,
+                       help='Seed pour la reproductibilité')
+    args = parser.parse_args()
+    
     print("=" * 60)
     print("EVALUATION DU MODELE")
     print("=" * 60)
+    
+    # Set random seed for reproducibility
+    import random
+    random.seed(args.random_seed)
+    np.random.seed(args.random_seed)
+    torch.manual_seed(args.random_seed)
     
     # Create directories
     os.makedirs('metrics', exist_ok=True)
@@ -181,24 +203,30 @@ def main():
     
     # Load data
     print("\n1. Chargement des données...")
-    data = torch.load('data/processed/train_data_s1.pt')
+    data = torch.load(args.data_path)
     
-    # Split into train and test (use the last 20% as test)
+    # Split into train and test
+    # NOTE: Using the last portion as test set. For production, consider using
+    # sklearn.model_selection.train_test_split with shuffle=True to avoid bias
+    # if the data is ordered by any characteristic.
     total_samples = len(data['images'])
-    test_size = int(0.2 * total_samples)
+    test_size = int(args.test_split * total_samples)
     
+    # Using last samples as test set (data is assumed to be shuffled during preparation)
     test_images = data['images'][-test_size:]
     test_labels = {k: v[-test_size:] for k, v in data['labels'].items()}
     
     test_dataset = ImageDataset(test_images, test_labels)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
     
     print(f"   Nombre d'échantillons de test: {len(test_dataset)}")
+    print(f"   Taille du batch: {args.batch_size}")
     
     # Load model
     print("\n2. Chargement du modèle...")
-    model = load_model('models/best_model.pth', DEVICE)
-    print(f"   Modèle chargé sur {DEVICE}")
+    model = load_model(args.model_path, DEVICE)
+    print(f"   Modèle chargé depuis: {args.model_path}")
+    print(f"   Device: {DEVICE}")
     
     # Evaluate
     print("\n3. Évaluation du modèle...")
