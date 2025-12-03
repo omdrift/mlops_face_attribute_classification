@@ -20,7 +20,9 @@ Thumbs.db
 
 # Project specific
 data/
+# Exclude pth files except the model we need
 *.pth
+!models/best_model.pth
 mlruns/
 logs/
 .dvc/
