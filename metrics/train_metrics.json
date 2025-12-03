@@ -1,0 +1,15 @@
+{
+  "best_val_loss": 0.03586819371421922,
+  "best_epoch": 9,
+  "final_epoch": 10,
+  "best_accuracies": {
+    "beard": 0.9978576529397762,
+    "mustache": 0.9976196143775291,
+    "glasses": 0.9985717686265175,
+    "hair_color": 0.9947631516305642,
+    "hair_length": 1.0
+  },
+  "avg_best_accuracy": 0.9977624375148775,
+  "training_time": "2025-12-03 01:14:09",
+  "early_stopped": false
+}
