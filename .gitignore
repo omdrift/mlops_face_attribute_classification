@@ -17,6 +17,7 @@ mlruns/
 venv/*.zip
 *.zip
 .dvc/
+.dvc/
 venv/
 .coverage
 htmlcov/
