@@ -115,7 +115,6 @@ def deploy_model(**context):
 check_new_data_task = PythonOperator(
     task_id='check_new_data',
     python_callable=check_new_data,
-    provide_context=True,
     dag=dag,
 )
 
@@ -123,7 +122,6 @@ check_new_data_task = PythonOperator(
 validate_data_task = PythonOperator(
     task_id='validate_data',
     python_callable=validate_data,
-    provide_context=True,
     dag=dag,
 )
 
@@ -152,7 +150,6 @@ evaluate_task = BashOperator(
 check_drift_task = PythonOperator(
     task_id='check_drift',
     python_callable=check_drift,
-    provide_context=True,
     dag=dag,
 )
 
@@ -160,7 +157,6 @@ check_drift_task = PythonOperator(
 deploy_task = PythonOperator(
     task_id='deploy',
     python_callable=deploy_model,
-    provide_context=True,
     dag=dag,
 )
 

@@ -114,28 +114,24 @@ def detect_anomalies(**context):
 validate_schema_task = PythonOperator(
     task_id='validate_schema',
     python_callable=validate_schema,
-    provide_context=True,
     dag=dag,
 )
 
 check_data_quality_task = PythonOperator(
     task_id='check_data_quality',
     python_callable=check_data_quality,
-    provide_context=True,
     dag=dag,
 )
 
 check_distributions_task = PythonOperator(
     task_id='check_distributions',
     python_callable=check_distributions,
-    provide_context=True,
     dag=dag,
 )
 
 detect_anomalies_task = PythonOperator(
     task_id='detect_anomalies',
     python_callable=detect_anomalies,
-    provide_context=True,
     dag=dag,
 )
 

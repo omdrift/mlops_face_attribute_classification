@@ -144,7 +144,6 @@ def rollback_model(**context):
 backup_task = PythonOperator(
     task_id='backup_current_model',
     python_callable=backup_current_model,
-    provide_context=True,
     dag=dag,
 )
 
@@ -159,7 +158,6 @@ retrain_task = BashOperator(
 evaluate_task = PythonOperator(
     task_id='evaluate_new_model',
     python_callable=evaluate_new_model,
-    provide_context=True,
     dag=dag,
 )
 
@@ -167,7 +165,6 @@ evaluate_task = PythonOperator(
 compare_task = BranchPythonOperator(
     task_id='compare_models',
     python_callable=compare_models,
-    provide_context=True,
     dag=dag,
 )
 
@@ -175,7 +172,6 @@ compare_task = BranchPythonOperator(
 deploy_task = PythonOperator(
     task_id='deploy_new_model',
     python_callable=deploy_new_model,
-    provide_context=True,
     dag=dag,
 )
 
@@ -183,7 +179,6 @@ deploy_task = PythonOperator(
 rollback_task = PythonOperator(
     task_id='rollback_model',
     python_callable=rollback_model,
-    provide_context=True,
     dag=dag,
 )
 
