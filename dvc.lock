@@ -5,19 +5,82 @@ stages:
     deps:
     - path: data/annotations/mapped_train.csv
       hash: md5
-      md5: 422899aaa9827d453568c6e364ad67f4
-      size: 503589
-    - path: data/raw/
+      md5: 64c7d882c6af9a414d73d53b918a0fa6
+      size: 483137
+    - path: data/raw
       hash: md5
-      md5: 813b2afa3d7eb385c22db2206ded0da2.dir
-      size: 6684981894
-      nfiles: 69075
+      md5: 9b357d57fdbe9faf7fe06e577e60916a.dir
+      size: 6685465031
+      nfiles: 69076
     - path: src/data/make_dataset.py
       hash: md5
-      md5: fd84b37969fb86cdef08ff691dd2efc7
-      size: 2863
+      md5: 0d5bf265e72dfdd227ea1fc98e64e6cd
+      size: 4921
     outs:
     - path: data/processed/train_data_s1.pt
       hash: md5
-      md5: 116289d80ebded9e93e54c3035db2961
-      size: 781662805
+      md5: 7ad1a90a1576d5dd099d80ad6e7254b1
+      size: 1033643029
+  hyperopt:
+    cmd: python src/training/hyperopt_search.py --max-evals 10
+    deps:
+    - path: data/processed/train_data_s1.pt
+      hash: md5
+      md5: 7ad1a90a1576d5dd099d80ad6e7254b1
+      size: 1033643029
+    - path: src/models/architecture.py
+      hash: md5
+      md5: d20737d55975392a696975519aeba468
+      size: 4593
+    - path: src/training/hyperopt_search.py
+      hash: md5
+      md5: 9727511717c0bb131abd4cec236bb723
+      size: 12766
+    - path: src/training/loops.py
+      hash: md5
+      md5: 998eae951fbb313b799927bcffda83ee
+      size: 6049
+    params:
+      params.yaml:
+        hyperopt.max_evals: 10
+    outs:
+    - path: src/training/hyperopt_params.json
+      hash: md5
+      md5: f79453df1245684fb251f5a473d464ff
+      size: 210
+  train:
+    cmd: python src/training/train.py
+    deps:
+    - path: data/processed/train_data_s1.pt
+      hash: md5
+      md5: 7ad1a90a1576d5dd099d80ad6e7254b1
+      size: 1033643029
+    - path: src/models/architecture.py
+      hash: md5
+      md5: d20737d55975392a696975519aeba468
+      size: 4593
+    - path: src/training/hyperopt_params.json
+      hash: md5
+      md5: f79453df1245684fb251f5a473d464ff
+      size: 210
+    - path: src/training/loops.py
+      hash: md5
+      md5: 998eae951fbb313b799927bcffda83ee
+      size: 6049
+    - path: src/training/train.py
+      hash: md5
+      md5: 6f2a9ad121db7289a2d124db92d056a2
+      size: 13302
+    params:
+      params.yaml:
+        train.batch_size: 32
+        train.epochs: 10
+    outs:
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: 674cc1c921eb25fd7af00b63cd230c88
+      size: 386
+    - path: models/best_model.pth
+      hash: md5
+      md5: b83b082a91de35c226012e855f43e9d4
+      size: 62893220
