@@ -1,0 +1,187 @@
+{
+  "dashboard": {
+    "title": "Drift Monitoring Dashboard",
+    "tags": ["mlops", "drift", "monitoring"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Drift Score by Attribute",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "drift_score{attribute=\"beard\"}",
+            "legendFormat": "Beard",
+            "refId": "A"
+          },
+          {
+            "expr": "drift_score{attribute=\"mustache\"}",
+            "legendFormat": "Mustache",
+            "refId": "B"
+          },
+          {
+            "expr": "drift_score{attribute=\"glasses\"}",
+            "legendFormat": "Glasses",
+            "refId": "C"
+          },
+          {
+            "expr": "drift_score{attribute=\"hair_color\"}",
+            "legendFormat": "Hair Color",
+            "refId": "D"
+          },
+          {
+            "expr": "drift_score{attribute=\"hair_length\"}",
+            "legendFormat": "Hair Length",
+            "refId": "E"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.1},
+                {"color": "orange", "value": 0.2},
+                {"color": "red", "value": 0.3}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Drift Timeline",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 16, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "drift_score",
+            "legendFormat": "{{attribute}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Drift Score", "min": 0, "max": 1},
+          {"format": "short", "show": false}
+        ],
+        "xaxis": {"mode": "time", "show": true}
+      },
+      {
+        "id": 3,
+        "title": "Drift Alerts History",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(increase(drift_alerts_total[24h]))",
+            "legendFormat": "Total Alerts (24h)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "justifyMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 50}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Feature Distribution Comparison",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.5, drift_feature_distribution_bucket)",
+            "legendFormat": "{{attribute}} - Current",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Distribution"},
+          {"format": "short", "show": false}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Model Performance Over Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "avg(model_accuracy)",
+            "legendFormat": "Average Accuracy",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "Accuracy", "min": 0.5, "max": 1},
+          {"format": "short", "show": false}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.8], "type": "lt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "frequency": "5m",
+          "handler": 1,
+          "name": "Low Model Accuracy Alert"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Drift Alerts by Severity",
+        "type": "piechart",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "sum by (severity) (increase(drift_alerts_total[24h]))",
+            "legendFormat": "{{severity}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Drift Alerts by Attribute",
+        "type": "bargauge",
+        "gridPos": {"h": 6, "w": 16, "x": 8, "y": 24},
+        "targets": [
+          {
+            "expr": "sum by (attribute) (increase(drift_alerts_total[24h]))",
+            "legendFormat": "{{attribute}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient"
+        }
+      }
+    ]
+  }
+}

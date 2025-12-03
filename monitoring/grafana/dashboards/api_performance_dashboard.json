@@ -1,0 +1,162 @@
+{
+  "dashboard": {
+    "title": "API Performance Dashboard",
+    "tags": ["mlops", "api", "performance"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Requests Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(api_requests_total[1m])",
+            "legendFormat": "{{method}} {{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short", "show": false}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "API Latency (P50, P95, P99)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(api_request_latency_seconds_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(api_request_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(api_request_latency_seconds_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Latency"},
+          {"format": "short", "show": false}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(api_requests_total{status=~\"5..\"}[5m]) / rate(api_requests_total[5m])",
+            "legendFormat": "Error Rate",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "Error Rate", "min": 0},
+          {"format": "short", "show": false}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.05], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "frequency": "1m",
+          "handler": 1,
+          "name": "High Error Rate Alert"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Predictions Distribution",
+        "type": "piechart",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 8},
+        "targets": [
+          {
+            "expr": "sum by (attribute, value) (increase(model_predictions_total[1h]))",
+            "legendFormat": "{{attribute}}={{value}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Cache Hit Rate",
+        "type": "gauge",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 8},
+        "targets": [
+          {
+            "expr": "images_in_cache_total",
+            "legendFormat": "Cached Images",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "max": 10000,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 1000},
+                {"color": "green", "value": 5000}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Total Requests by Endpoint",
+        "type": "bargauge",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 14},
+        "targets": [
+          {
+            "expr": "sum by (endpoint) (increase(api_requests_total[1h]))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Model Inference Latency",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 14},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(model_inference_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95 Inference Time",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Latency"},
+          {"format": "short", "show": false}
+        ]
+      }
+    ]
+  }
+}

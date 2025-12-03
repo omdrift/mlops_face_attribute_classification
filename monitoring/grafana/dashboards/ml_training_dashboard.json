@@ -1,0 +1,124 @@
+{
+  "dashboard": {
+    "title": "ML Training Dashboard",
+    "tags": ["mlops", "training", "mlflow"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Training Loss Over Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "training_loss",
+            "legendFormat": "Train Loss",
+            "refId": "A"
+          },
+          {
+            "expr": "validation_loss",
+            "legendFormat": "Val Loss",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Loss"},
+          {"format": "short", "show": false}
+        ],
+        "xaxis": {"mode": "time", "show": true}
+      },
+      {
+        "id": 2,
+        "title": "Model Accuracy by Attribute",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "model_accuracy{attribute=\"beard\"}",
+            "legendFormat": "Beard",
+            "refId": "A"
+          },
+          {
+            "expr": "model_accuracy{attribute=\"mustache\"}",
+            "legendFormat": "Mustache",
+            "refId": "B"
+          },
+          {
+            "expr": "model_accuracy{attribute=\"glasses\"}",
+            "legendFormat": "Glasses",
+            "refId": "C"
+          },
+          {
+            "expr": "model_accuracy{attribute=\"hair_color\"}",
+            "legendFormat": "Hair Color",
+            "refId": "D"
+          },
+          {
+            "expr": "model_accuracy{attribute=\"hair_length\"}",
+            "legendFormat": "Hair Length",
+            "refId": "E"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "Accuracy", "min": 0, "max": 1},
+          {"format": "short", "show": false}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Learning Rate Schedule",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "learning_rate",
+            "legendFormat": "Learning Rate",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "LR", "logBase": 10},
+          {"format": "short", "show": false}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Epochs vs Best Metrics",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 8},
+        "targets": [
+          {
+            "expr": "best_val_loss",
+            "legendFormat": "Best Val Loss",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "justifyMode": "auto"
+        }
+      },
+      {
+        "id": 5,
+        "title": "Training Duration",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 8},
+        "targets": [
+          {
+            "expr": "training_duration_seconds",
+            "legendFormat": "Duration",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "unit": "s"
+        }
+      }
+    ]
+  }
+}
