@@ -1,0 +1,15 @@
+# Airflow dependencies
+apache-airflow==2.7.3
+apache-airflow-providers-postgres==5.7.1
+
+# Database
+psycopg2-binary==2.9.9
+
+# ML dependencies for DAGs
+mlflow==2.8.1
+dvc==3.30.1
+evidently==0.4.11
+
+# Utilities
+pandas==2.1.3
+numpy==1.24.3

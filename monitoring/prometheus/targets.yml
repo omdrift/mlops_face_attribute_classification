@@ -1,0 +1,8 @@
+# Targets configuration (optional - can be included in prometheus.yml)
+
+- targets:
+    - 'api:8000'
+  labels:
+    job: 'ml-api'
+    service: 'face-classification'
+    env: 'production'

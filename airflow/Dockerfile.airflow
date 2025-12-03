@@ -1,0 +1,31 @@
+FROM apache/airflow:2.7.3-python3.10
+
+USER root
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow
+
+# Copy requirements
+COPY requirements-airflow.txt /tmp/requirements-airflow.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /tmp/requirements-airflow.txt
+
+# Copy DAGs and plugins
+COPY --chown=airflow:root airflow/dags /opt/airflow/dags
+COPY --chown=airflow:root airflow/plugins /opt/airflow/plugins
+COPY --chown=airflow:root airflow/config/airflow.cfg /opt/airflow/airflow.cfg
+
+# Set environment variables
+ENV AIRFLOW_HOME=/opt/airflow
+ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+
+# Expose ports
+EXPOSE 8080

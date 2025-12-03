@@ -1,0 +1,78 @@
+# Alertmanager Configuration
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alertmanager@mlops.local'
+  smtp_auth_username: 'your-email@gmail.com'
+  smtp_auth_password: 'your-app-password'
+  smtp_require_tls: true
+
+# Route configuration
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+  
+  routes:
+    # Critical alerts
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      continue: true
+    
+    # Warning alerts
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+    
+    # Info alerts
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+
+# Receivers configuration
+receivers:
+  - name: 'default'
+    email_configs:
+      - to: 'team@example.com'
+        headers:
+          Subject: '[MLOps] Alert: {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>Alert: {{ .GroupLabels.alertname }}</h2>
+          <p><strong>Status:</strong> {{ .Status }}</p>
+          <p><strong>Summary:</strong> {{ .CommonAnnotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+  
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'oncall@example.com'
+        headers:
+          Subject: '[CRITICAL] MLOps Alert: {{ .GroupLabels.alertname }}'
+    # Add webhook for Slack/PagerDuty/etc
+    # webhook_configs:
+    #   - url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     send_resolved: true
+  
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'team@example.com'
+        headers:
+          Subject: '[WARNING] MLOps Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'info-alerts'
+    email_configs:
+      - to: 'logs@example.com'
+        headers:
+          Subject: '[INFO] MLOps Alert: {{ .GroupLabels.alertname }}'
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning if critical is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

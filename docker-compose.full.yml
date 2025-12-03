@@ -1,0 +1,280 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # ML API Service (placeholder - adapt to your actual API)
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile
+    container_name: mlops-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./src:/app/src
+    environment:
+      - MODEL_PATH=/app/models/best_model.pth
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - mlops
+    depends_on:
+      - mlflow
+
+  # ============================================================================
+  # MLflow Tracking Server
+  # ============================================================================
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlops-mlflow
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow/mlflow.db --default-artifact-root /mlflow/artifacts
+    networks:
+      - mlops
+
+  # ============================================================================
+  # Prometheus - Metrics Collection
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mlops-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - ./monitoring/prometheus/targets.yml:/etc/prometheus/targets.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - mlops
+    depends_on:
+      - api
+
+  # ============================================================================
+  # Grafana - Visualization & Dashboards
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mlops-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana-data:/var/lib/grafana
+    networks:
+      - mlops
+    depends_on:
+      - prometheus
+
+  # ============================================================================
+  # Alertmanager - Alert Management
+  # ============================================================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: mlops-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - mlops
+
+  # ============================================================================
+  # Airflow - Workflow Orchestration
+  # ============================================================================
+  
+  postgres:
+    image: postgres:13
+    container_name: mlops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    networks:
+      - mlops
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.airflow
+    container_name: mlops-airflow-webserver
+    restart: unless-stopped
+    command: webserver
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./src:/app/src
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./metrics:/app/metrics
+      - airflow-logs:/opt/airflow/logs
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mlops
+    depends_on:
+      - postgres
+      - airflow-init
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.airflow
+    container_name: mlops-airflow-scheduler
+    restart: unless-stopped
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./src:/app/src
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./metrics:/app/metrics
+      - airflow-logs:/opt/airflow/logs
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mlops
+    depends_on:
+      - postgres
+      - airflow-init
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.airflow
+    container_name: mlops-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
+        airflow db init
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+    volumes:
+      - airflow-logs:/opt/airflow/logs
+    networks:
+      - mlops
+    depends_on:
+      - postgres
+
+  # ============================================================================
+  # Optional: System Metrics
+  # ============================================================================
+  
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mlops-node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - mlops
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: mlops-cadvisor
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - mlops
+
+# ============================================================================
+# Networks
+# ============================================================================
+
+networks:
+  mlops:
+    driver: bridge
+
+# ============================================================================
+# Volumes
+# ============================================================================
+
+volumes:
+  mlflow-data:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  postgres-db-volume:
+  airflow-logs:

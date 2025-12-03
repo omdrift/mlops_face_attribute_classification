@@ -1,0 +1,221 @@
+{
+  "dashboard": {
+    "title": "ML Model Metrics",
+    "uid": "ml-metrics",
+    "version": 1,
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Predictions by Attribute",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum by (attribute) (rate(model_predictions_total[5m]))",
+            "legendFormat": "{{ attribute }}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Model Confidence Distribution",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum by (le, attribute) (rate(model_confidence_score_bucket[5m]))",
+            "legendFormat": "{{ attribute }}",
+            "refId": "A",
+            "format": "heatmap"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Inference Latency (P50/P95/P99)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(model_inference_latency_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(model_inference_latency_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(model_inference_latency_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Latency"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Drift Score Timeline",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "drift_score",
+            "legendFormat": "{{ attribute }}",
+            "refId": "A"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.2],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "Drift Score Alert",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 5,
+        "title": "Model Accuracy by Attribute",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "model_accuracy",
+            "legendFormat": "{{ attribute }}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.7, "color": "yellow"},
+                {"value": 0.85, "color": "green"}
+              ]
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Images Processed",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 0, "y": 22},
+        "targets": [
+          {
+            "expr": "sum(images_processed_total)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 7,
+        "title": "Model Status",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 8, "y": 22},
+        "targets": [
+          {
+            "expr": "model_loaded",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "textMode": "name"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "0", "text": "Not Loaded"},
+              {"type": "value", "value": "1", "text": "Loaded"}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Cache Size",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 16, "y": 22},
+        "targets": [
+          {
+            "expr": "cache_size",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      }
+    ]
+  }
+}

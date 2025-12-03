@@ -1,0 +1,127 @@
+# Prometheus Alert Rules for MLOps
+
+groups:
+  - name: ml_api_alerts
+    interval: 30s
+    rules:
+      # High API latency alert
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(api_request_latency_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API latency detected"
+          description: "P95 latency is {{ $value }}s (threshold: 0.5s) for endpoint {{ $labels.endpoint }}"
+
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(api_requests_total{status="error"}[5m])) /
+          sum(rate(api_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High API error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Model not loaded alert
+      - alert: ModelNotLoaded
+        expr: model_loaded == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: model
+        annotations:
+          summary: "ML model is not loaded"
+          description: "The ML model has not been loaded for {{ $value }}m"
+
+      # Drift detected alert
+      - alert: DriftDetected
+        expr: drift_score > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "Data/model drift detected"
+          description: "Drift score is {{ $value }} for attribute {{ $labels.attribute }} (threshold: 0.2)"
+
+      # Low model accuracy alert
+      - alert: LowModelAccuracy
+        expr: model_accuracy < 0.7
+        for: 15m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "Low model accuracy detected"
+          description: "Model accuracy is {{ $value }} for attribute {{ $labels.attribute }} (threshold: 0.7)"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High inference latency
+      - alert: HighInferenceLatency
+        expr: histogram_quantile(0.95, rate(model_inference_latency_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "High model inference latency"
+          description: "P95 inference latency is {{ $value }}s (threshold: 1.0s)"
+
+      # Low request rate (potential service issue)
+      - alert: LowRequestRate
+        expr: rate(api_requests_total[5m]) < 0.01
+        for: 10m
+        labels:
+          severity: info
+          component: api
+        annotations:
+          summary: "Low API request rate"
+          description: "Request rate is {{ $value }} req/s - service may be down or unused"
+
+      # High memory usage (if available)
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+  - name: model_performance_alerts
+    interval: 1m
+    rules:
+      # Sudden drop in predictions
+      - alert: PredictionRateDropped
+        expr: |
+          rate(model_predictions_total[5m]) < 
+          0.5 * avg_over_time(rate(model_predictions_total[5m])[1h:5m])
+        for: 10m
+        labels:
+          severity: warning
+          component: model
+        annotations:
+          summary: "Prediction rate has dropped significantly"
+          description: "Current prediction rate is 50% lower than the 1-hour average"
+
+      # Low confidence predictions
+      - alert: LowConfidencePredictions
+        expr: |
+          histogram_quantile(0.5, rate(model_confidence_score_bucket[5m])) < 0.7
+        for: 15m
+        labels:
+          severity: info
+          component: model
+        annotations:
+          summary: "High rate of low-confidence predictions"
+          description: "Median confidence score is {{ $value }} (threshold: 0.7) for {{ $labels.attribute }}"
