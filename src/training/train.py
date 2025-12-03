@@ -365,6 +365,47 @@ def main():
         mlflow.log_metric("final_best_val_loss", float(best_val_loss))
         mlflow.log_metric("final_avg_accuracy", float(sum(val_accs.values()) / len(val_accs)))
         mlflow.log_metric("total_epochs", int(epoch))
+        
+        # ===== MLFLOW MODEL LOGGING (NEW) =====
+        print(f"\n Logging model to MLFlow...")
+        
+        # Set tags for categorization
+        mlflow.set_tags({
+            "model_type": "CustomMultiHeadCNN",
+            "dataset": "face_attributes_s1",
+            "stage": "training"
+        })
+        
+        # Load best model for logging
+        checkpoint = torch.load('models/best_model.pth', map_location=DEVICE)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+        
+        # Create sample input for signature inference
+        with torch.no_grad():
+            sample_input = next(iter(val_loader))[0][:1].to(DEVICE)  # Get one sample
+            sample_output = model(sample_input)
+            
+            # Convert output dict to format for signature
+            output_dict = {
+                k: v.cpu().numpy() for k, v in sample_output.items()
+            }
+            
+            # Infer signature
+            signature = mlflow.models.infer_signature(
+                sample_input.cpu().numpy(),
+                output_dict
+            )
+        
+        # Log the model with signature
+        mlflow.pytorch.log_model(
+            model,
+            artifact_path="model",
+            signature=signature,
+            registered_model_name="face_attributes_multihead"
+        )
+        
+        print(f" Model logged successfully to MLFlow!")
 
 if __name__ == '__main__':
     main()
