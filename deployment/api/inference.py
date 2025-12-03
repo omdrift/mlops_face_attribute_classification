@@ -20,7 +20,7 @@ from src.models.architecture import CustomMultiHeadCNN
 from api.utils import get_all_images_from_directory
 
 # Configuration
-MODEL_PATH = os.environ.get("MODEL_PATH", "/app/models/final_model_1.pth")
+MODEL_PATH = os.environ.get("MODEL_PATH", "/app/models/best_model.pth")
 DATA_DIR = os.environ.get("DATA_DIR", "/app/data")
 CACHE_DIR = os.environ.get("CACHE_DIR", "/tmp")
 CACHE_FILE = os.path.join(CACHE_DIR, "predictions_cache.json")
