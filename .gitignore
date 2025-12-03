@@ -18,3 +18,16 @@ venv/*.zip
 *.zip
 .dvc/
 venv/
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
