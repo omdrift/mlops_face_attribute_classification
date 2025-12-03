@@ -110,9 +110,8 @@ def main():
     """Pipeline d'entraînement"""
     print(f" Device: {DEVICE}")
     print(f" ROOT_DIR: {ROOT_DIR}")
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
     hyperopt_params = load_hyperopt_params()
-    
+
     if hyperopt_params:
         BATCH_SIZE = hyperopt_params.get('batch_size', 32)
         lr = hyperopt_params.get('lr', 1e-3)
@@ -149,13 +148,7 @@ def main():
     print(f" Train: {len(X_train)}, Val: {len(X_val)}")
     
     # Transforms
-    train_transforms = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(15),  # ← Augmenté
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),  # ← NOUVEAU
-        transforms.RandomErasing(p=0.1),  # ← NOUVEAU (masque aléatoire)
-
-    ])
+    train_transforms = None
 
 
     
@@ -202,7 +195,7 @@ def main():
         min_lr=1e-6,
     )
     
-
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
     # MLflow
     mlflow.set_experiment("Projet_Visage_MultiHead")
     
@@ -238,7 +231,7 @@ def main():
             f.write(str(model))
             f.write(f"\n\nTotal parameters: {sum(p.numel() for p in model.parameters()):,}\n")
             f.write(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}\n")
-        mlflow.log_artifacts('.', artifact_path='model_info')  # ✅ Nouvelle API
+        mlflow.log_artifacts('model_summary.txt', artifact_path='model_info')  # ✅ Nouvelle API
         
         best_val_loss = float('inf')
         best_epoch = 0
@@ -340,10 +333,10 @@ def main():
         # Générer et logger les graphiques
         print(f"\n Génération des graphiques...")
         plot_training_curves(train_losses_history, val_losses_history, 'training_curves.png')
-        mlflow.log_artifacts('.', artifact_path='plots')  # Log tous les .png
+        mlflow.log_artifacts('training_curves.png', artifact_path='plots')  # Log tous les .png
         
         plot_accuracy_curves(acc_history, 'accuracy_curves.png')
-        mlflow.log_artifacts('.', artifact_path='plots')  # Log tous les .png
+        mlflow.log_artifacts('accuracy_curves.png', artifact_path='plots')  # Log tous les .png
         
         print(f"\n{'='*60}")
         print(" Entraînement terminé!")
@@ -366,7 +359,7 @@ def main():
         with open('metrics/train_metrics.json', 'w') as f:
             json.dump(final_metrics, f, indent=2)
         
-        mlflow.log_artifacts('metrics', artifact_path='metrics')
+        mlflow.log_artifacts('metrics.json', artifact_path='metrics')
         
         # Log final metrics summary
         mlflow.log_metric("final_best_val_loss", float(best_val_loss))
