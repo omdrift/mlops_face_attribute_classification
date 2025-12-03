@@ -7,6 +7,9 @@ from typing import Dict, List, Tuple
 from scipy import stats
 from scipy.special import kl_div
 
+# Constants
+LAPLACE_SMOOTHING = 1  # Smoothing factor to avoid division by zero
+
 
 def calculate_psi(
     reference: np.ndarray,
@@ -129,7 +132,10 @@ def detect_feature_drift(
             ref_aligned = np.array([ref_counts.get(v, 0) for v in all_values])
             curr_aligned = np.array([curr_counts.get(v, 0) for v in all_values])
             
-            chi2, p_value = stats.chisquare(curr_aligned + 1, ref_aligned + 1)
+            chi2, p_value = stats.chisquare(
+                curr_aligned + LAPLACE_SMOOTHING, 
+                ref_aligned + LAPLACE_SMOOTHING
+            )
         else:
             # KS test for continuous
             ks_stat, p_value = stats.ks_2samp(ref_values, curr_values)

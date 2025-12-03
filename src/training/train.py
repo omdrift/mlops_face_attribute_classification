@@ -369,7 +369,7 @@ def main():
         
         # Generate Evidently drift report after training
         try:
-            print("\n Generating Evidently drift report...")
+            print("\nGenerating Evidently drift report...")
             from src.monitoring.evidently_monitoring import load_reference_data
             from src.monitoring.drift_detection import detect_feature_drift, generate_drift_summary
             from src.monitoring.report_generator import generate_html_report, log_to_mlflow
@@ -401,13 +401,13 @@ def main():
                 mlflow.log_metric("drift_share", summary['drift_share'])
                 mlflow.log_metric("avg_psi", summary['avg_psi'])
                 
-                print(f" Drift report generated successfully")
-                print(f"   Drift share: {summary['drift_share']:.2%}")
-                print(f"   Average PSI: {summary['avg_psi']:.4f}")
+                print(f"Drift report generated successfully")
+                print(f"  Drift share: {summary['drift_share']:.2%}")
+                print(f"  Average PSI: {summary['avg_psi']:.4f}")
             else:
-                print(" Could not generate drift report - reference data not found")
+                print("Could not generate drift report - reference data not found")
         except Exception as e:
-            print(f" Warning: Could not generate drift report: {e}")
+            print(f"Warning: Could not generate drift report: {e}")
 
 if __name__ == '__main__':
     main()

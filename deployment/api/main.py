@@ -25,6 +25,11 @@ from src.monitoring.prometheus_metrics import (
     PrometheusMiddleware
 )
 
+# Label mappings
+HAIR_COLOR_LABELS = ["Black", "Blonde", "Brown", "Gray", "Red"]
+HAIR_LENGTH_LABELS = ["Short", "Medium", "Long"]
+BINARY_LABELS = {0: "No", 1: "Yes"}
+
 # Initialize FastAPI app
 app = FastAPI(
     title="MLOps Face Attribute Classification API",
@@ -159,11 +164,11 @@ async def predict(file: UploadFile = File(...)):
         result = {
             "predictions": predictions,
             "labels": {
-                "beard": "Yes" if predictions['beard'] == 1 else "No",
-                "mustache": "Yes" if predictions['mustache'] == 1 else "No",
-                "glasses": "Yes" if predictions['glasses'] == 1 else "No",
-                "hair_color": ["Black", "Blonde", "Brown", "Gray", "Red"][predictions['hair_color']],
-                "hair_length": ["Short", "Medium", "Long"][predictions['hair_length']],
+                "beard": BINARY_LABELS[predictions['beard']],
+                "mustache": BINARY_LABELS[predictions['mustache']],
+                "glasses": BINARY_LABELS[predictions['glasses']],
+                "hair_color": HAIR_COLOR_LABELS[predictions['hair_color']],
+                "hair_length": HAIR_LENGTH_LABELS[predictions['hair_length']],
             }
         }
         

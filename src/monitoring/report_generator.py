@@ -3,6 +3,7 @@ Report generator for drift and performance monitoring
 """
 import os
 import json
+import tempfile
 from datetime import datetime
 from typing import Dict, Optional
 import pandas as pd
@@ -262,11 +263,19 @@ def log_to_mlflow(
                 mlflow.log_metric(f'drift_{feature}', 1 if metrics['drift_detected'] else 0)
         
         # Log as artifact
-        temp_file = f'/tmp/drift_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-        with open(temp_file, 'w') as f:
-            json.dump(drift_results, f, indent=2)
-        mlflow.log_artifact(temp_file, artifact_path='monitoring')
-        os.remove(temp_file)
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.json',
+            prefix=f'drift_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}_',
+            delete=False
+        ) as temp_file:
+            json.dump(drift_results, temp_file, indent=2)
+            temp_file_path = temp_file.name
+        
+        try:
+            mlflow.log_artifact(temp_file_path, artifact_path='monitoring')
+        finally:
+            os.remove(temp_file_path)
         
         print("✓ Drift metrics logged to MLflow")
     

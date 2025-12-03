@@ -1,8 +1,10 @@
 """
 Prometheus metrics integration for FastAPI
 """
-from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
-from prometheus_client import CollectorRegistry
+from prometheus_client import (
+    Counter, Histogram, Gauge, Info, 
+    generate_latest, CONTENT_TYPE_LATEST, CollectorRegistry
+)
 from typing import Callable
 import time
 from functools import wraps
