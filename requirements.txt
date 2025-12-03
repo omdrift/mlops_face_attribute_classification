@@ -21,3 +21,6 @@ apache-airflow
 evidently
 prometheus-client
 grafana-api
+pytest
+pytest-cov
+flake8

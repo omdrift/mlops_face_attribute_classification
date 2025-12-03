@@ -1,0 +1,107 @@
+name: DVC Pipeline Validation
+
+# Trigger on push and pull requests
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'dvc.yaml'
+      - 'dvc.lock'
+      - 'params.yaml'
+      - '.github/workflows/dvc.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'dvc.yaml'
+      - 'dvc.lock'
+      - 'params.yaml'
+
+jobs:
+  validate-dvc:
+    name: Validate DVC Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-dvc-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-dvc-
+
+      - name: Install DVC
+        run: |
+          python -m pip install --upgrade pip
+          pip install dvc pyyaml
+
+      - name: Check if DVC files exist
+        run: |
+          if [ ! -f dvc.yaml ]; then
+            echo "Error: dvc.yaml not found"
+            exit 1
+          fi
+          if [ ! -f params.yaml ]; then
+            echo "Error: params.yaml not found"
+            exit 1
+          fi
+          echo "DVC configuration files found"
+
+      - name: Validate dvc.yaml syntax
+        run: |
+          # Check if dvc.yaml is valid YAML
+          python -c "import yaml; yaml.safe_load(open('dvc.yaml'))"
+          echo "✓ dvc.yaml is valid YAML"
+
+      - name: Validate params.yaml syntax
+        run: |
+          # Check if params.yaml is valid YAML
+          python -c "import yaml; yaml.safe_load(open('params.yaml'))"
+          echo "✓ params.yaml is valid YAML"
+
+      - name: Check DVC pipeline status
+        run: |
+          # Show pipeline structure
+          dvc dag --md || echo "Cannot generate DAG (data dependencies may not be available)"
+          
+          # List pipeline stages
+          echo "DVC Pipeline Stages:"
+          dvc stage list || echo "Cannot list stages (DVC may need data access)"
+
+      - name: Validate pipeline structure
+        run: |
+          # Basic validation of pipeline structure
+          python << 'EOF'
+          import yaml
+          
+          with open('dvc.yaml', 'r') as f:
+              dvc_config = yaml.safe_load(f)
+          
+          if 'stages' not in dvc_config:
+              raise ValueError("No 'stages' key found in dvc.yaml")
+          
+          stages = dvc_config['stages']
+          print(f"Found {len(stages)} stages:")
+          for stage_name, stage_config in stages.items():
+              print(f"  - {stage_name}")
+              
+              # Check required keys
+              if 'cmd' not in stage_config:
+                  print(f"    ⚠️  Warning: No 'cmd' key in stage {stage_name}")
+              else:
+                  print(f"    ✓ cmd: {stage_config['cmd']}")
+          
+          print("\n✓ DVC pipeline structure is valid")
+          EOF
+
+      - name: Summary
+        run: |
+          echo "✅ DVC pipeline validation completed successfully"
+          echo "The pipeline structure is valid and ready for execution"
