@@ -19,6 +19,9 @@ on:
         default: '0.001'
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   train-model:
     name: Train ML Model
