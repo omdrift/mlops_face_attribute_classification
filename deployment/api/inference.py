@@ -106,11 +106,11 @@ class FaceAttributePredictor:
             
             # Extract predictions
             predictions = {
-                "barbe": int(torch.sigmoid(outputs['beard']) > 0.5),
-                "moustache": int(torch.sigmoid(outputs['mustache']) > 0.5),
-                "lunettes": int(torch.sigmoid(outputs['glasses']) > 0.5),
-                "taille_cheveux": int(torch.argmax(outputs['hair_length'], dim=1)),
-                "couleur_cheveux": int(torch.argmax(outputs['hair_color'], dim=1))
+                "barbe": int((torch.sigmoid(outputs['beard']) > 0.5).item()),
+                "moustache": int((torch.sigmoid(outputs['mustache']) > 0.5).item()),
+                "lunettes": int((torch.sigmoid(outputs['glasses']) > 0.5).item()),
+                "taille_cheveux": int(torch.argmax(outputs['hair_length'], dim=1).item()),
+                "couleur_cheveux": int(torch.argmax(outputs['hair_color'], dim=1).item())
             }
             
             return predictions

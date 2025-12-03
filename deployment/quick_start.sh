@@ -56,7 +56,13 @@ sleep 10
 
 echo ""
 echo "Step 6: Testing health endpoint..."
-curl -s http://localhost:8000/health | python3 -m json.tool || echo "Health check failed"
+if command -v jq &> /dev/null; then
+    curl -s http://localhost:8000/health | jq .
+elif command -v python3 &> /dev/null; then
+    curl -s http://localhost:8000/health | python3 -c "import sys, json; print(json.dumps(json.load(sys.stdin), indent=2))" 2>/dev/null || curl -s http://localhost:8000/health
+else
+    curl -s http://localhost:8000/health
+fi
 
 echo ""
 echo "======================================"

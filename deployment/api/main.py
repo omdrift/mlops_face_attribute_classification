@@ -141,8 +141,12 @@ async def predict_attributes(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="File must be an image")
     
-    # Save uploaded file temporarily
-    temp_path = f"/tmp/{file.filename}"
+    # Use a secure random filename to prevent path traversal
+    import uuid
+    file_extension = os.path.splitext(file.filename)[1]
+    secure_filename = f"{uuid.uuid4()}{file_extension}"
+    temp_path = f"/tmp/{secure_filename}"
+    
     try:
         contents = await file.read()
         with open(temp_path, 'wb') as f:
