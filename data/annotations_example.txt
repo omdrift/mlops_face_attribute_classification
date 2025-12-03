@@ -1,0 +1,17 @@
+# Example annotations.csv format
+# Place this file at: data/annotations.csv
+
+# CSV structure:
+# - First column: filename (must match files in data/images/)
+# - Other columns: attribute names with probability values (0.0 to 1.0)
+
+# Example content:
+filename,Male,Young,Smiling,Eyeglasses,Attractive,Wavy_Hair,Black_Hair,Blond_Hair,Brown_Hair,Gray_Hair,Bald,Bangs,Receding_Hairline,Straight_Hair,Wearing_Hat,Wearing_Earrings,Wearing_Lipstick,Wearing_Necklace,Wearing_Necktie,Heavy_Makeup,Pale_Skin,Rosy_Cheeks,Big_Lips,Big_Nose,Pointy_Nose,High_Cheekbones,Arched_Eyebrows,Bushy_Eyebrows,Narrow_Eyes,Bags_Under_Eyes,Double_Chin,Goatee,Mustache,No_Beard,Sideburns,5_o_Clock_Shadow,Chubby,Oval_Face
+image001.jpg,0.95,0.87,0.92,0.05,0.78,0.34,0.12,0.05,0.82,0.01,0.02,0.15,0.08,0.45,0.03,0.02,0.03,0.04,0.01,0.05,0.23,0.12,0.34,0.23,0.45,0.67,0.56,0.12,0.23,0.12,0.05,0.01,0.03,0.89,0.02,0.12,0.15,0.23
+image002.jpg,0.12,0.95,0.76,0.88,0.85,0.67,0.45,0.23,0.12,0.02,0.01,0.78,0.03,0.56,0.05,0.92,0.95,0.12,0.02,0.87,0.34,0.45,0.56,0.34,0.23,0.78,0.89,0.12,0.34,0.23,0.02,0.01,0.01,0.98,0.01,0.02,0.12,0.45
+
+# Notes:
+# - All probability values should be between 0.0 and 1.0
+# - Higher values indicate higher confidence in the presence of that attribute
+# - The model uses a threshold (default 0.5) to determine if an attribute is present
+# - Images not in this file will be processed on-the-fly (slower)
