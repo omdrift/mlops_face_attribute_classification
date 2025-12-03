@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/
+*.pth
+mlruns/
+logs/
+.dvc/
+notebooks/
+.git/
+.gitignore
+README.md
+*.md
+tests/
+docs/
+
+# Images (should be mounted via volume)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# Temporary files
+*.log
+tmp/
+temp/

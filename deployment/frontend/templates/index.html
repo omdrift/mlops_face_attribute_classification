@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche d'Images par Attributs Faciaux</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Recherche d'Images par Attributs Faciaux</h1>
+            <p class="subtitle">Sélectionnez les attributs pour trouver les images correspondantes</p>
+        </header>
+
+        <div class="content">
+            <!-- Filters Section -->
+            <section class="filters-section">
+                <h2>Filtres</h2>
+                
+                <div class="filter-group">
+                    <h3>Barbe</h3>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" name="barbe" value="0"> Non
+                        </label>
+                        <label>
+                            <input type="checkbox" name="barbe" value="1"> Oui
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>Moustache</h3>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" name="moustache" value="0"> Non
+                        </label>
+                        <label>
+                            <input type="checkbox" name="moustache" value="1"> Oui
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>Lunettes</h3>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" name="lunettes" value="0"> Non
+                        </label>
+                        <label>
+                            <input type="checkbox" name="lunettes" value="1"> Oui
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>Taille des Cheveux</h3>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" name="taille_cheveux" value="0"> Chauve
+                        </label>
+                        <label>
+                            <input type="checkbox" name="taille_cheveux" value="1"> Court
+                        </label>
+                        <label>
+                            <input type="checkbox" name="taille_cheveux" value="2"> Long
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>Couleur des Cheveux</h3>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" name="couleur_cheveux" value="0"> Blond
+                        </label>
+                        <label>
+                            <input type="checkbox" name="couleur_cheveux" value="1"> Châtain
+                        </label>
+                        <label>
+                            <input type="checkbox" name="couleur_cheveux" value="2"> Roux
+                        </label>
+                        <label>
+                            <input type="checkbox" name="couleur_cheveux" value="3"> Brun
+                        </label>
+                        <label>
+                            <input type="checkbox" name="couleur_cheveux" value="4"> Gris/Blanc
+                        </label>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="searchBtn" class="btn btn-primary">🔍 Rechercher</button>
+                    <button id="resetBtn" class="btn btn-secondary">🔄 Réinitialiser</button>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section">
+                <div class="results-header">
+                    <h2>Résultats</h2>
+                    <div id="resultsCount" class="results-count">0 images trouvées</div>
+                </div>
+
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Recherche en cours...</p>
+                </div>
+
+                <div id="resultsGrid" class="results-grid"></div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="pagination" style="display: none;">
+                    <button id="prevPage" class="btn btn-sm">← Précédent</button>
+                    <span id="pageInfo">Page 1</span>
+                    <button id="nextPage" class="btn btn-sm">Suivant →</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <h2>📤 Prédire les Attributs d'une Image</h2>
+            <div class="upload-container">
+                <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                <button id="uploadBtn" class="btn btn-primary">Choisir une image</button>
+                <div id="uploadResult" class="upload-result"></div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Face Attribute Classification API v1.0.0</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

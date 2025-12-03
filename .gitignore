@@ -18,3 +18,8 @@ venv/*.zip
 *.zip
 .dvc/
 venv/
+
+# Docker
+api.tar
+*.tar
+deployment/images/
