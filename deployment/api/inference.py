@@ -20,7 +20,7 @@ from src.models.architecture import CustomMultiHeadCNN
 from api.utils import get_all_images_from_directory
 
 # Configuration
-MODEL_PATH = os.environ.get("MODEL_PATH", "/app/models/best_model.pth")
+MODEL_PATH = os.environ.get("MODEL_PATH", "/app/models/final_model_1.pth")
 DATA_DIR = os.environ.get("DATA_DIR", "/app/data")
 CACHE_DIR = os.environ.get("CACHE_DIR", "/tmp")
 CACHE_FILE = os.path.join(CACHE_DIR, "predictions_cache.json")
@@ -35,6 +35,29 @@ def get_data_hash(data_dir: str) -> str:
     images = sorted(get_all_images_from_directory(data_dir))
     content = "|".join(images)
     return hashlib.md5(content.encode()).hexdigest()[:16]
+
+
+def preprocess_image(path, size=64):
+    """
+    Prétraitement EXACTEMENT comme pendant l'entraînement
+    """
+    img = cv2.imread(path)
+    if img is None:
+        return None
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)[1]
+    coords = cv2.findNonZero(thresh)
+    
+    if coords is None or len(coords) == 0:
+        # Pas de contenu trouvé, utiliser l'image entière
+        cropped = img
+    else:
+        x, y, w, h = cv2.boundingRect(coords)
+        cropped = img[y:y+h, x:x+w]
+    
+    resized = cv2.resize(cropped, (size, size))
+    return resized.astype("float32") / 255.0
 
 
 class FaceAttributePredictor:
@@ -62,88 +85,10 @@ class FaceAttributePredictor:
             
             self.model.eval()
             self.model_loaded = True
-            logger.info("✅ Model loaded successfully")
+            logger.info(" Model loaded successfully")
         except Exception as e:
-            logger.error(f"❌ Error loading model: {e}")
+            logger.error(f" Error loading model: {e}")
             raise
-    
-    def preprocess_image(self, image_path: str) -> Optional[torch.Tensor]:
-        """
-        Preprocess image EXACTEMENT comme pendant l'entraînement
-        """
-        try:
-            # === MÉTHODE 1: Avec OpenCV (comme l'entraînement) ===
-            img = cv2.imread(image_path)
-            if img is None:
-                logger.debug(f"Cannot read image: {image_path}")
-                return None
-            
-            # Convertir BGR → RGB
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            
-            # Crop sur le contenu (enlever fond blanc) - IMPORTANT!
-            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            thresh = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)[1]
-            coords = cv2.findNonZero(thresh)
-            
-            if coords is not None and len(coords) > 0:
-                x, y, w, h = cv2.boundingRect(coords)
-                # Vérifier que le crop est valide
-                if w > 10 and h > 10:
-                    img = img[y:y+h, x:x+w]
-            
-            # Resize à la taille d'entraînement
-            img = cv2.resize(img, (IMAGE_SIZE, IMAGE_SIZE))
-            
-            # Normaliser [0, 255] → [0, 1]
-            img = img.astype(np.float32) / 255.0
-            
-            # Convertir en tensor (H, W, C) → (C, H, W)
-            img_tensor = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0)
-            
-            return img_tensor.to(DEVICE)
-            
-        except Exception as e:
-            logger.debug(f"Error preprocessing {image_path}: {e}")
-            return None
-    
-    def preprocess_image_pil(self, image_path: str) -> Optional[torch.Tensor]:
-        """
-        Alternative: Preprocess avec PIL (si OpenCV pose problème)
-        """
-        try:
-            img = Image.open(image_path).convert('RGB')
-            img_array = np.array(img)
-            
-            # Crop sur le contenu (enlever fond blanc)
-            gray = np.mean(img_array, axis=2)
-            mask = gray < 250  # Pixels non-blancs
-            
-            if mask.any():
-                rows = np.any(mask, axis=1)
-                cols = np.any(mask, axis=0)
-                y_min, y_max = np.where(rows)[0][[0, -1]]
-                x_min, x_max = np.where(cols)[0][[0, -1]]
-                
-                # Vérifier que le crop est valide
-                if (y_max - y_min) > 10 and (x_max - x_min) > 10:
-                    img_array = img_array[y_min:y_max+1, x_min:x_max+1]
-            
-            # Resize
-            img = Image.fromarray(img_array)
-            img = img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.BILINEAR)
-            
-            # Normaliser
-            img_array = np.array(img).astype(np.float32) / 255.0
-            
-            # Tensor
-            img_tensor = torch.from_numpy(img_array).permute(2, 0, 1).unsqueeze(0)
-            
-            return img_tensor.to(DEVICE)
-            
-        except Exception as e:
-            logger.debug(f"Error preprocessing {image_path}: {e}")
-            return None
     
     def predict_single_image(self, image_path: str) -> Optional[Dict[str, int]]:
         """Predict attributes for a single image"""
@@ -151,31 +96,45 @@ class FaceAttributePredictor:
             logger.error("Model not loaded")
             return None
         
-        # Utiliser le prétraitement OpenCV (comme l'entraînement)
-        img_tensor = self.preprocess_image(image_path)
+        # Utiliser la fonction de prétraitement exacte
+        img = preprocess_image(image_path, size=IMAGE_SIZE)
         
-        # Fallback sur PIL si OpenCV échoue
-        if img_tensor is None:
-            img_tensor = self.preprocess_image_pil(image_path)
-        
-        if img_tensor is None:
+        if img is None:
+            logger.debug(f"Cannot preprocess image: {image_path}")
             return None
         
         try:
+            # Convertir en tensor: (H, W, C) → (C, H, W) → (1, C, H, W)
+            img_tensor = torch.tensor(img, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+            img_tensor = img_tensor.to(DEVICE)
+            
             with torch.no_grad():
-                # Le modèle retourne un tuple
-                out_beard, out_mustache, out_glasses, out_color, out_length = self.model(img_tensor)
+                outputs = self.model(img_tensor)
+            
+            # Le modèle retourne un dictionnaire avec les clés:
+            # 'beard', 'mustache', 'glasses' -> tensors de shape [batch, 1]
+            # 'hair_color', 'hair_length' -> tensors de shape [batch, n_classes]
+            
+            # Extraire les prédictions binaires (sigmoid > 0.5)
+            beard_pred = (torch.sigmoid(outputs['beard']) > 0.5).cpu().numpy().astype(int).item()
+            mustache_pred = (torch.sigmoid(outputs['mustache']) > 0.5).cpu().numpy().astype(int).item()
+            glasses_pred = (torch.sigmoid(outputs['glasses']) > 0.5).cpu().numpy().astype(int).item()
+            
+            # Extraire les prédictions multi-classes (argmax)
+            hair_color_pred = outputs['hair_color'].argmax(dim=1).cpu().numpy().item()
+            hair_length_pred = outputs['hair_length'].argmax(dim=1).cpu().numpy().item()
             
             predictions = {
-                "barbe": int(torch.sigmoid(out_beard).item() > 0.5),
-                "moustache": int(torch.sigmoid(out_mustache).item() > 0.5),
-                "lunettes": int(torch.sigmoid(out_glasses).item() > 0.5),
-                "taille_cheveux": int(torch.argmax(out_length, dim=1).item()),
-                "couleur_cheveux": int(torch.argmax(out_color, dim=1).item())
+                "barbe": beard_pred,
+                "moustache": mustache_pred,
+                "lunettes": glasses_pred,
+                "taille_cheveux": hair_length_pred,
+                "couleur_cheveux": hair_color_pred
             }
             return predictions
+            
         except Exception as e:
-            logger.error(f"Error during prediction: {e}")
+            logger.error(f"Error during prediction for {image_path}: {e}")
             return None
     
     def is_cache_valid(self) -> bool:
@@ -191,10 +150,10 @@ class FaceAttributePredictor:
             current_hash = get_data_hash(DATA_DIR)
             
             if cached_hash == current_hash:
-                logger.info(f"✅ Cache is valid (hash: {current_hash})")
+                logger.info(f" Cache is valid (hash: {current_hash})")
                 return True
             else:
-                logger.info(f"⚠️ Cache outdated (cached: {cached_hash}, current: {current_hash})")
+                logger.info(f" Cache outdated (cached: {cached_hash}, current: {current_hash})")
                 return False
         except Exception as e:
             logger.error(f"Error checking cache: {e}")
@@ -209,7 +168,7 @@ class FaceAttributePredictor:
             self.predictions_cache = cache_data.get("predictions", {})
             self.data_hash = cache_data.get("data_hash", "")
             
-            logger.info(f"✅ Loaded {len(self.predictions_cache)} predictions from cache")
+            logger.info(f" Loaded {len(self.predictions_cache)} predictions from cache")
             return True
         except Exception as e:
             logger.error(f"Error loading cache: {e}")
@@ -227,7 +186,7 @@ class FaceAttributePredictor:
             with open(CACHE_FILE, 'w') as f:
                 json.dump(cache_data, f)
             
-            logger.info(f"✅ Saved {len(self.predictions_cache)} predictions to cache")
+            logger.info(f" Saved {len(self.predictions_cache)} predictions to cache")
         except Exception as e:
             logger.error(f"Error saving cache: {e}")
     
@@ -240,29 +199,32 @@ class FaceAttributePredictor:
         
         self.data_hash = get_data_hash(DATA_DIR)
         
-        logger.info(f"📂 Scanning images in {DATA_DIR}")
+        logger.info(f" Scanning images in {DATA_DIR}")
         images = get_all_images_from_directory(DATA_DIR)
         total = len(images)
-        logger.info(f"📊 Found {total} images")
+        logger.info(f" Found {total} images")
         
         if total == 0:
-            logger.warning("⚠️ No images found!")
+            logger.warning(" No images found!")
             return
         
         self.predictions_cache = {}
+        errors = 0
         
         for i, filename in enumerate(images):
             if i % 500 == 0:
                 progress = (i / total) * 100
-                logger.info(f"🔄 Processing {i+1}/{total} ({progress:.1f}%)")
+                logger.info(f" Processing {i+1}/{total} ({progress:.1f}%)")
             
             image_path = os.path.join(DATA_DIR, filename)
             predictions = self.predict_single_image(image_path)
             
             if predictions:
                 self.predictions_cache[filename] = predictions
+            else:
+                errors += 1
         
-        logger.info(f"✅ Processed {len(self.predictions_cache)}/{total} images successfully")
+        logger.info(f" Processed {len(self.predictions_cache)}/{total} images successfully ({errors} errors)")
         self.save_cache()
     
     def get_predictions_cache(self) -> Dict:
