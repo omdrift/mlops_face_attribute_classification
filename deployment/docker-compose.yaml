@@ -12,6 +12,7 @@ services:
    volumes:
      # Mount your local images directory here
      - ./images:/app/data
+     - ./cache:/tmp:rw
    environment:
      - PYTHONUNBUFFERED=1
    restart: unless-stopped
