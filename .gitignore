@@ -17,5 +17,11 @@ mlruns/
 venv/*.zip
 *.zip
 .dvc/
+.dvc/
 venv/
+.coverage
+htmlcov/
+mlflow/
+mlflow.
+mlflow.db
 .pytest_cache/  
