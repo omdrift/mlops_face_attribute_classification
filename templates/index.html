@@ -473,27 +473,66 @@
                 return;
             }
 
-            resultsGrid.innerHTML = data.results.map(result => {
+            // Clear previous results
+            resultsGrid.innerHTML = '';
+            
+            // Create image cards
+            data.results.forEach(result => {
                 const matchScore = (result.match_score * 100).toFixed(1);
-                const attributeTags = Object.entries(result.attributes)
-                    .map(([attr, prob]) => `
-                        <span class="attribute-tag">${attr}: ${(prob * 100).toFixed(0)}%</span>
-                    `).join('');
-
-                return `
-                    <div class="image-card" onclick="window.open('${result.path}', '_blank')">
-                        <img src="${result.path}" alt="${result.filename}" 
-                             onerror="this.src='/static/placeholder.png'">
-                        <div class="image-info">
-                            <div class="image-filename">${result.filename}</div>
-                            <span class="match-score">Match: ${matchScore}%</span>
-                            <div class="image-attributes">
-                                ${attributeTags}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                
+                // Create card element
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                
+                // Add click handler with proper event listener
+                card.addEventListener('click', function() {
+                    window.open(result.path, '_blank');
+                });
+                
+                // Create image element
+                const img = document.createElement('img');
+                img.src = result.path;
+                img.alt = result.filename;
+                img.onerror = function() {
+                    this.src = '/static/placeholder.png';
+                };
+                
+                // Create info div
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'image-info';
+                
+                // Create filename div
+                const filenameDiv = document.createElement('div');
+                filenameDiv.className = 'image-filename';
+                filenameDiv.textContent = result.filename;
+                
+                // Create match score span
+                const matchSpan = document.createElement('span');
+                matchSpan.className = 'match-score';
+                matchSpan.textContent = `Match: ${matchScore}%`;
+                
+                // Create attributes div
+                const attrsDiv = document.createElement('div');
+                attrsDiv.className = 'image-attributes';
+                
+                // Add attribute tags
+                Object.entries(result.attributes).forEach(([attr, prob]) => {
+                    const tag = document.createElement('span');
+                    tag.className = 'attribute-tag';
+                    tag.textContent = `${attr}: ${(prob * 100).toFixed(0)}%`;
+                    attrsDiv.appendChild(tag);
+                });
+                
+                // Assemble the card
+                infoDiv.appendChild(filenameDiv);
+                infoDiv.appendChild(matchSpan);
+                infoDiv.appendChild(attrsDiv);
+                
+                card.appendChild(img);
+                card.appendChild(infoDiv);
+                
+                resultsGrid.appendChild(card);
+            });
         }
 
         // Allow Enter key to trigger search

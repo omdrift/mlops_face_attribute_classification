@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import os
 import json
 from pathlib import Path
@@ -33,6 +33,9 @@ image_database = None
 DATA_DIR = os.getenv('DATA_DIR', '/app/data')
 ANNOTATIONS_PATH = os.path.join(DATA_DIR, 'annotations.csv')
 IMAGES_DIR = os.path.join(DATA_DIR, 'images')
+
+# Configuration
+MAX_IMAGES_TO_PROCESS = int(os.getenv('MAX_IMAGES_TO_PROCESS', '100'))
 
 
 class AttributeQuery(BaseModel):
@@ -165,7 +168,7 @@ def search_images_by_attributes(
     
     else:
         # Process images on-the-fly
-        for image_path in image_files[:100]:  # Limit to avoid timeout
+        for image_path in image_files[:MAX_IMAGES_TO_PROCESS]:  # Limit to avoid timeout
             if len(results) >= limit:
                 break
             
@@ -248,7 +251,7 @@ async def get_attributes() -> Dict[str, List[str]]:
 
 
 @app.post("/api/search")
-async def search_images(query: AttributeQuery) -> Dict[str, any]:
+async def search_images(query: AttributeQuery) -> Dict[str, Any]:
     """
     Search for images with specified attributes.
     
