@@ -18,3 +18,4 @@ venv/*.zip
 *.zip
 .dvc/
 venv/
+.pytest_cache/  
