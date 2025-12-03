@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir -r requirements-api.txt
 # Copy application code
 COPY deployment/api/ ./api/
 COPY deployment/frontend/ ./frontend/
-COPY src/models/architecture.py ./src/models/
+COPY src/__init__.py ./src/
 COPY src/models/__init__.py ./src/models/
+COPY src/models/architecture.py ./src/models/
 
 # Copy the trained model
 COPY models/best_model.pth ./models/
