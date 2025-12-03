@@ -3,7 +3,7 @@ Evidently AI monitoring class for drift detection and model performance
 """
 import os
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any
 import pandas as pd
 import numpy as np
 
@@ -12,8 +12,13 @@ try:
     from evidently.report import Report
     from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
     from evidently.metrics import DatasetDriftMetric, DatasetMissingValuesMetric
+    EVIDENTLY_AVAILABLE = True
 except ImportError:
     print("Warning: evidently not installed. Install with: pip install evidently")
+    EVIDENTLY_AVAILABLE = False
+    # Dummy classes for type hints
+    ColumnMapping = Any
+    Report = Any
 
 
 class EvidentlyMonitor:
@@ -29,12 +34,15 @@ class EvidentlyMonitor:
             reference_data: Reference dataset for comparison (training data)
         """
         self.reference_data = reference_data
-        self.column_mapping = ColumnMapping(
-            target=None,  # Multi-output model
-            prediction=None,
-            numerical_features=[],
-            categorical_features=['beard', 'mustache', 'glasses', 'hair_color', 'hair_length']
-        )
+        if EVIDENTLY_AVAILABLE:
+            self.column_mapping = ColumnMapping(
+                target=None,  # Multi-output model
+                prediction=None,
+                numerical_features=[],
+                categorical_features=['beard', 'mustache', 'glasses', 'hair_color', 'hair_length']
+            )
+        else:
+            self.column_mapping = None
     
     def set_reference_data(self, data: pd.DataFrame):
         """Set reference data for drift detection"""
@@ -45,7 +53,7 @@ class EvidentlyMonitor:
         self,
         current_data: pd.DataFrame,
         output_path: Optional[str] = None
-    ) -> Report:
+    ) -> Optional[Report]:
         """
         Generate data drift report comparing current data to reference
         
@@ -54,8 +62,12 @@ class EvidentlyMonitor:
             output_path: Path to save HTML report (optional)
         
         Returns:
-            Evidently Report object
+            Evidently Report object or None if evidently not available
         """
+        if not EVIDENTLY_AVAILABLE:
+            print("⚠ Evidently not available - skipping drift report generation")
+            return None
+            
         if self.reference_data is None:
             raise ValueError("Reference data not set. Call set_reference_data() first.")
         

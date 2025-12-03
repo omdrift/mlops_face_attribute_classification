@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import mlflow
 import numpy as np
+import pandas as pd
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
@@ -365,6 +366,48 @@ def main():
         mlflow.log_metric("final_best_val_loss", float(best_val_loss))
         mlflow.log_metric("final_avg_accuracy", float(sum(val_accs.values()) / len(val_accs)))
         mlflow.log_metric("total_epochs", int(epoch))
+        
+        # Generate Evidently drift report after training
+        try:
+            print("\n Generating Evidently drift report...")
+            from src.monitoring.evidently_monitoring import load_reference_data
+            from src.monitoring.drift_detection import detect_feature_drift, generate_drift_summary
+            from src.monitoring.report_generator import generate_html_report, log_to_mlflow
+            
+            # Load reference data (training data)
+            ref_data = load_reference_data()
+            
+            if ref_data is not None:
+                # Use validation data as current data for initial drift report
+                val_labels = pd.DataFrame(
+                    y_val,
+                    columns=['beard', 'mustache', 'glasses', 'hair_color', 'hair_length']
+                )
+                
+                # Detect drift
+                drift_results = detect_feature_drift(ref_data, val_labels, threshold=0.1)
+                summary = generate_drift_summary(drift_results)
+                
+                # Create full results
+                full_results = {
+                    'summary': summary,
+                    'features': drift_results
+                }
+                
+                # Generate HTML report
+                generate_html_report(full_results, title="Post-Training Drift Report")
+                
+                # Log to MLflow
+                mlflow.log_metric("drift_share", summary['drift_share'])
+                mlflow.log_metric("avg_psi", summary['avg_psi'])
+                
+                print(f" Drift report generated successfully")
+                print(f"   Drift share: {summary['drift_share']:.2%}")
+                print(f"   Average PSI: {summary['avg_psi']:.4f}")
+            else:
+                print(" Could not generate drift report - reference data not found")
+        except Exception as e:
+            print(f" Warning: Could not generate drift report: {e}")
 
 if __name__ == '__main__':
     main()
