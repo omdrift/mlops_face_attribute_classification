@@ -16,5 +16,23 @@ mflow/
 mlruns/
 venv/*.zip
 *.zip
-.dvc/
+.dvc/cache/
+.dvc/tmp/
 venv/
+
+# Airflow
+airflow/logs/*
+!airflow/logs/.gitkeep
+airflow/__pycache__/
+.env
+*.db
+*.db-shm
+*.db-wal
+
+# Artifacts
+artifacts/
+dvc_plots/
+
+# Temporary files
+*.tmp
+.pytest_cache/

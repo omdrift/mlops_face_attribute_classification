@@ -1,6 +1,31 @@
+# Hyperparameter optimization settings
 hyperopt:
   max_evals: 10
-
+  timeout: 3600  # 1 hour timeout
+  algorithm: tpe  # Tree-structured Parzen Estimator
+  
+# Training settings
 train:
   epochs: 10
   batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  early_stopping_patience: 5
+  
+# Model architecture
+model:
+  dropout: 0.3
+  hidden_dim: 256
+  
+# Data processing
+data:
+  image_size: 64
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  random_seed: 42
+  
+# Evaluation
+eval:
+  batch_size: 64
+  threshold: 0.5

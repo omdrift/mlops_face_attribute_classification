@@ -1,3 +1,44 @@
 # Add patterns of files dvc should ignore, which could improve
 # the performance. Learn more at
 # https://dvc.org/doc/user-guide/dvcignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+logs/
+*.log
+
+# MLflow
+mlruns/
+mlflow/
+
+# Model checkpoints (except final models)
+*.pth.tmp
+checkpoints/
+
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db

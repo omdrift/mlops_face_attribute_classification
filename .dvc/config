@@ -1,0 +1,29 @@
+[core]
+    remote = storage
+    autostage = true
+    check_update = false
+
+[remote "storage"]
+    url = /tmp/dvc-storage
+    
+# Example for S3 remote (commented out)
+# [remote "s3storage"]
+#     url = s3://my-bucket/dvc-storage
+#     region = us-east-1
+#     access_key_id = YOUR_ACCESS_KEY
+#     secret_access_key = YOUR_SECRET_KEY
+
+# Example for Google Drive remote (commented out)
+# [remote "gdrive"]
+#     url = gdrive://your-gdrive-folder-id
+
+[cache]
+    type = symlink
+    dir = .dvc/cache
+    
+[state]
+    row_limit = 10000
+    row_cleanup_quota = 50
+
+[analytics]
+    enabled = false

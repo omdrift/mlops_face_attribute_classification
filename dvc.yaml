@@ -1,15 +1,25 @@
 stages:
   prepare_train:
+    desc: "Préparation des données d'entraînement - prétraitement et normalisation"
     cmd: python src/data/make_dataset.py
     deps:
       - data/raw
       - data/annotations/mapped_train.csv
       - src/data/make_dataset.py
     outs:
-      - data/processed/train_data_s1.pt
+      - data/processed/train_data_s1.pt:
+          desc: "Données d'entraînement prétraitées (images + labels)"
+          cache: true
+    metrics:
+      - metrics/data_stats.json:
+          cache: false
+    plots:
+      - plots/data_distribution.png:
+          cache: false
 
   hyperopt:
-    cmd: python src/training/hyperopt_search.py --max-evals 10
+    desc: "Optimisation des hyperparamètres avec Hyperopt"
+    cmd: python src/training/hyperopt_search.py --max-evals ${hyperopt.max_evals}
     deps:
       - data/processed/train_data_s1.pt
       - src/training/hyperopt_search.py
@@ -17,22 +27,54 @@ stages:
       - src/training/loops.py
     params:
       - hyperopt.max_evals
+      - hyperopt.timeout
     outs:
-      - src/training/hyperopt_params.json
+      - src/training/hyperopt_params.json:
+          desc: "Meilleurs hyperparamètres trouvés"
+          cache: false
+    metrics:
+      - metrics/hyperopt_results.json:
+          cache: false
 
   train:
+    desc: "Entraînement du modèle avec les meilleurs hyperparamètres"
     cmd: python src/training/train.py
     deps:
       - data/processed/train_data_s1.pt
       - src/training/train.py
-      - src/training/hyperopt_params.json  # Dépend du résultat de hyperopt
+      - src/training/hyperopt_params.json
       - src/models/architecture.py
       - src/training/loops.py
     params:
       - train.epochs
       - train.batch_size
+      - train.learning_rate
     outs:
-      - models/best_model.pth
+      - models/best_model.pth:
+          desc: "Modèle entraîné avec les meilleurs poids"
+          cache: true
     metrics:
       - metrics/train_metrics.json:
+          cache: false
+    plots:
+      - plots/training_curves.png:
+          cache: false
+      - plots/accuracy_curves.png:
+          cache: false
+
+  evaluate:
+    desc: "Évaluation du modèle sur l'ensemble de test"
+    cmd: python src/training/evaluate.py
+    deps:
+      - models/best_model.pth
+      - data/processed/train_data_s1.pt
+      - src/training/evaluate.py
+      - src/models/architecture.py
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
+    plots:
+      - plots/confusion_matrices.png:
+          cache: false
+      - plots/roc_curves.png:
           cache: false
