@@ -19,3 +19,8 @@ venv/*.zip
 .dvc/
 venv/
 .coverage
+htmlcov/
+mlflow/
+mlflow.
+mlflow.db
+.pytest_cache/  
