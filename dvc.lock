@@ -38,15 +38,15 @@ stages:
       size: 12766
     - path: src/training/loops.py
       hash: md5
-      md5: 998eae951fbb313b799927bcffda83ee
-      size: 6049
+      md5: 3216ae5eab6415a19b2d981e1da8bc65
+      size: 6051
     params:
       params.yaml:
         hyperopt.max_evals: 20
     outs:
     - path: src/training/hyperopt_params.json
       hash: md5
-      md5: 393204b8aeb699b1147dbf62e786c7cb
+      md5: 07051eb2cbc8938ee2840d3f42dd61c6
       size: 210
   train:
     cmd: python src/training/train.py
@@ -61,16 +61,16 @@ stages:
       size: 4593
     - path: src/training/hyperopt_params.json
       hash: md5
-      md5: 393204b8aeb699b1147dbf62e786c7cb
+      md5: 07051eb2cbc8938ee2840d3f42dd61c6
       size: 210
     - path: src/training/loops.py
       hash: md5
-      md5: 998eae951fbb313b799927bcffda83ee
-      size: 6049
+      md5: 3216ae5eab6415a19b2d981e1da8bc65
+      size: 6051
     - path: src/training/train.py
       hash: md5
-      md5: 4e815e343dae5eb5d392043cdc3c892b
-      size: 14822
+      md5: 140f079f9cc7df952f3322cb2ad047a7
+      size: 14723
     params:
       params.yaml:
         train.batch_size: 32
@@ -78,11 +78,11 @@ stages:
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: f8f95673be4f0b60e64a8ffc9912cb79
-      size: 385
+      md5: d8f5fd6d6fcf2c31efa07e7e859f599b
+      size: 387
     - path: models/best_model.pth
       hash: md5
-      md5: 2126d7b1d7c844ba9ff3d548f805f872
+      md5: 052da7df4bf9185bd05d03db2fcb5578
       size: 62893220
   evaluate:
     cmd: python src/training/evaluate.py
@@ -93,7 +93,7 @@ stages:
       size: 1033643029
     - path: models/best_model.pth
       hash: md5
-      md5: 2126d7b1d7c844ba9ff3d548f805f872
+      md5: 052da7df4bf9185bd05d03db2fcb5578
       size: 62893220
     - path: src/training/evaluate.py
       hash: md5
@@ -106,7 +106,7 @@ stages:
     outs:
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: a11f67f3faa1ac66fad6621c0152782d
+      md5: 7baa2c68296263dac2521457bbdda6e4
       size: 1631
   inference_batches:
     cmd: python src/inference/batch_inference.py

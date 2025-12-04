@@ -13,6 +13,8 @@ ce = nn.CrossEntropyLoss()
 
 # Suppress tqdm warnings if any
 tqdm.pandas()
+
+
 def train_one_epoch(model, loader, optimizer, device, epoch):
     """Version stabilisée de l'entraînement"""
     model.train()
@@ -40,8 +42,8 @@ def train_one_epoch(model, loader, optimizer, device, epoch):
         total_loss = (
             loss_beard * 1.0 +
             loss_mustache * 1.0 +
-            loss_glasses * 2.0 +
-            loss_color * 0.8 +
+            loss_glasses * 1.0 +
+            loss_color * 1.0 +
             loss_length * 1.0
         )
 
@@ -120,8 +122,8 @@ def validate(model, loader, device):
             total_loss = (
                 loss_beard * 1.0 +
                 loss_mustache * 1.0 +
-                loss_glasses * 2.0 +
-                loss_color * 0.8 +
+                loss_glasses * 1.0 +
+                loss_color * 1.0 +
                 loss_length * 1.0
             )
 

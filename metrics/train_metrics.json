@@ -1,15 +1,15 @@
 {
-  "best_val_loss": 0.03586819371421922,
-  "best_epoch": 9,
-  "final_epoch": 10,
+  "best_val_loss": 0.02638941045297267,
+  "best_epoch": 16,
+  "final_epoch": 20,
   "best_accuracies": {
-    "beard": 0.9978576529397762,
-    "mustache": 0.9976196143775291,
-    "glasses": 0.9985717686265175,
-    "hair_color": 0.9947631516305642,
+    "beard": 0.9983337300642704,
+    "mustache": 0.9973815758152821,
+    "glasses": 0.9997619614377529,
+    "hair_color": 0.9980956915020234,
     "hair_length": 1.0
   },
-  "avg_best_accuracy": 0.9977624375148775,
-  "training_time": "2025-12-03 01:14:09",
+  "avg_best_accuracy": 0.9987145917638657,
+  "training_time": "2025-12-04 02:50:37",
   "early_stopped": false
 }
