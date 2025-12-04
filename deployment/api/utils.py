@@ -30,28 +30,31 @@ def get_human_readable_labels(predictions: Dict[str, int]) -> Dict[str, str]:
 
 
 def get_all_images_from_directory(directory: str) -> list:
-   """
-   Get all image files from a directory
-   
-   Args:
-       directory: Path to the directory containing images
-       
-   Returns:
-       List of image filenames
-   """
-   if not os.path.exists(directory):
-       return []
-   
-   valid_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
-   images = []
-   
-   for filename in os.listdir(directory):
-       ext = os.path.splitext(filename)[1].lower()
-       if ext in valid_extensions:
-           images.append(filename)
-   
-   return sorted(images)
-
+    """
+    Get all image files from a directory and its subdirectories (recursive)
+    
+    Args:
+        directory: Path to the directory containing images
+        
+    Returns:
+        List of image paths relative to the directory
+    """
+    if not os.path.exists(directory):
+        return []
+    
+    valid_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
+    images = []
+    
+    # Scan recursively through all subdirectories
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in valid_extensions:
+                # Get relative path from the base directory
+                rel_path = os.path.relpath(os.path.join(root, filename), directory)
+                images.append(rel_path)
+    
+    return sorted(images)
 
 def filter_images_by_attributes(predictions_cache: Dict, search_params: Dict) -> list:
    """
