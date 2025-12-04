@@ -53,18 +53,20 @@ def find_image_in_raw(filename, raw_dir):
     """
     raw_path = Path(raw_dir)
     
-    # 1. Chercher directement à la racine
-    direct_path = raw_path / filename
-    if direct_path.exists():
-        return str(direct_path)
-    
-    # 2. Chercher dans tous les sous-dossiers (lot1, lot2, etc.)
-    for item in raw_path.rglob(filename):
-        if item.is_file():
-            return str(item)
-    
-    return None
+ # Extract lot from filename (e.g., 's1' from 's1_00000.png')
+    # The lot is the prefix before the first underscore and after 's'
+    lot = filename.split('_')[0] if '_' in filename else None
 
+    if lot:
+        # Construct path as: data/raw/{lot}/{filename}
+        full_path = raw_path / lot / filename
+        if full_path.exists():
+            return str(full_path)
+
+    # Fallback: try direct path in case structure is different
+    full_path = raw_path / filename
+    if full_path.exists():
+        return str(full_path)
 
 def process_training_data():
     print("="*60)
