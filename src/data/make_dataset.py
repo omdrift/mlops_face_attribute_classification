@@ -1,5 +1,12 @@
 """
 Préparation des données d'entraînement depuis data/raw/
+Training data is driven ONLY by the annotation CSV (mapped_train.csv).
+
+The CSV should contain a 'filename' column with relative paths from data/raw/
+(e.g., 's1/img_001.png') and label columns (beard, mustache, glasses_binary, 
+hair_color_label, hair_length).
+
+Images are loaded from data/raw/<filename> where filename can include subdirectories.
 """
 import numpy as np
 import pandas as pd
@@ -48,70 +55,76 @@ def preprocess_image(img, size=64):
 
 def find_image_in_raw(filename, raw_dir):
     """
-    Cherche une image dans data/raw et ses sous-dossiers
-    Retourne le chemin complet si trouvé, None sinon
+    Constructs the full path to an image in data/raw.
+    
+    The filename should be a relative path from data/raw (e.g., 's1/img_001.png').
+    Returns the full path if the file exists, None otherwise.
+    
+    Args:
+        filename: Relative path from raw_dir (can include subdirectories)
+        raw_dir: Root directory for raw images
+        
+    Returns:
+        Full path to image if it exists, None otherwise
     """
     raw_path = Path(raw_dir)
+    full_path = raw_path / filename
     
-    # 1. Chercher directement à la racine
-    direct_path = raw_path / filename
-    if direct_path.exists():
-        return str(direct_path)
-    
-    # 2. Chercher dans tous les sous-dossiers (lot1, lot2, etc.)
-    for item in raw_path.rglob(filename):
-        if item.is_file():
-            return str(item)
+    if full_path.exists():
+        return str(full_path)
     
     return None
 
 
 def process_training_data():
+    """
+    Build training dataset from mapped_train.csv.
+    
+    Only images listed in the CSV are included in the training set.
+    The CSV 'filename' column should contain relative paths from data/raw/
+    (e.g., 's1/img_001.png').
+    """
     print("="*60)
-    print("PRÉPARATION DU LOT S1 (TRAINING)")
+    print("PRÉPARATION DES DONNÉES D'ENTRAÎNEMENT")
+    print("CSV-DRIVEN: Only images in mapped_train.csv are included")
     print("="*60)
     
-    # 1. Lire les labels
-    print(f"\n Chargement des annotations: {LABEL_CSV}")
+    # 1. Lire les annotations depuis le CSV
+    print(f"\n📄 Chargement des annotations: {LABEL_CSV}")
+    if not os.path.exists(LABEL_CSV):
+        raise FileNotFoundError(f"Annotation CSV not found: {LABEL_CSV}")
+        
     df = pd.read_csv(LABEL_CSV)
-    
-    # Filtrer uniquement S1 pour l'entraînement
     stats['total'] = len(df)
     
-    print(f"   Total annotations: {len(df)}")
-    print(f"   Annotations : {len(df)}")
-    print(f"   Lots présents dans le CSV: {sorted(df['filename'].str[:2].unique())}")
+    print(f"   Total annotations dans le CSV: {len(df)}")
+    
+    # Vérifier les colonnes requises
+    required_cols = ['filename', 'beard', 'mustache', 'glasses_binary', 
+                     'hair_color_label', 'hair_length']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns in CSV: {missing_cols}")
     
     images_list = []
     labels_list = []
     missing_files = []
     failed_files = []
+    processed_filenames = []
     
-    # 2. Créer un index des fichiers dans data/raw
-    print(f"\n Scan du dossier: {RAW_DIR}")
-    raw_path = Path(RAW_DIR)
+    # 2. Traiter chaque image listée dans le CSV
+    print(f"\n🔄 Traitement des images listées dans le CSV...")
     
-    # Lister tous les fichiers .png dans raw/ et ses sous-dossiers
-    all_files = {}
-    for img_path in raw_path.rglob("*.png"):
-        all_files[img_path.name] = str(img_path)
-    
-    print(f"   Fichiers PNG trouvés: {len(all_files)}")
-    print(f"   Exemples: {list(all_files.keys())[:5]}")
-    
-    # 3. Traiter chaque annotation S1
-    print(f"\n  Traitement des images S1...")
-    
-    for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing"):
+    for idx, row in tqdm(df.iterrows(), total=len(df), desc="Processing"):
         filename = row['filename']
         
-        # Chercher le fichier dans l'index
-        if filename not in all_files:
+        # Construire le chemin complet vers l'image
+        img_path = find_image_in_raw(filename, RAW_DIR)
+        
+        if img_path is None:
             stats['not_found'] += 1
             missing_files.append(filename)
             continue
-        
-        img_path = all_files[filename]
         
         try:
             # Lire l'image
@@ -139,15 +152,16 @@ def process_training_data():
                 row['hair_color_label'], 
                 row['hair_length']
             ])
+            processed_filenames.append(filename)
             stats['success'] += 1
             
         except Exception as e:
             stats['decode_failed'] += 1
             failed_files.append(f"{filename} (erreur: {str(e)})")
     
-    # 4. Sauvegarder
+    # 3. Sauvegarder
     if len(images_list) > 0:
-        print(f"\n Sauvegarde des données...")
+        print(f"\n💾 Sauvegarde des données...")
         X = torch.tensor(np.array(images_list)).permute(0, 3, 1, 2)  # (N, C, H, W)
         y = torch.tensor(np.array(labels_list), dtype=torch.long)
         
@@ -156,15 +170,37 @@ def process_training_data():
             'X': X, 
             'y': y,
             'stats': stats,
-            'filenames': df['filename'].tolist()
+            'filenames': processed_filenames
         }, output_path)
         
-        print(f" Sauvegardé: {output_path}")
+        print(f"✅ Sauvegardé: {output_path}")
         print(f"   Shape X: {X.shape}")
         print(f"   Shape y: {y.shape}")
     else:
-        print(" Aucune image traitée!")
+        print("❌ Aucune image traitée!")
         return
+    
+    # 4. Afficher le résumé
+    print(f"\n{'='*60}")
+    print("RÉSUMÉ DU TRAITEMENT")
+    print(f"{'='*60}")
+    print(f"  Total annotations dans CSV: {stats['total']}")
+    print(f"  ✅ Succès: {stats['success']}")
+    print(f"  ❌ Non trouvées: {stats['not_found']}")
+    print(f"  ❌ Échec de lecture: {stats['decode_failed']}")
+    print(f"  ❌ Échec de prétraitement: {stats['crop_failed']}")
+    
+    if missing_files:
+        print(f"\n⚠️  Fichiers manquants (premiers 10):")
+        for f in missing_files[:10]:
+            print(f"     - {f}")
+    
+    if failed_files:
+        print(f"\n⚠️  Fichiers en échec (premiers 10):")
+        for f in failed_files[:10]:
+            print(f"     - {f}")
+    
+    print(f"{'='*60}")
     
     
 
