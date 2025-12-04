@@ -215,7 +215,7 @@ def save_mapped_labels(df: pd.DataFrame, output_path: str):
             for lot, count in lots.items():
                 print(f"    {lot}: {count} images")
         except Exception as e:
-            print(f"\n[!] Could not extract lot distribution: {e}")
+            print(f"\n[!] Could not extract lot distribution: {type(e).__name__}: {e}")
 
 
 def main():
