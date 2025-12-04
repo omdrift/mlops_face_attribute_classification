@@ -118,7 +118,7 @@ stages:
       nfiles: 100006
     - path: models/best_model.pth
       hash: md5
-      md5: 2126d7b1d7c844ba9ff3d548f805f872
+      md5: 052da7df4bf9185bd05d03db2fcb5578
       size: 62893220
     - path: src/inference/batch_inference.py
       hash: md5
@@ -131,5 +131,5 @@ stages:
     outs:
     - path: outputs/predictions.csv
       hash: md5
-      md5: 39f08fa6411e408e112a70aeddec3903
+      md5: c20f584f4c12b21be709bd97179aea50
       size: 2300055
