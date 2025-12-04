@@ -121,6 +121,47 @@ Logs are stored in `airflow/logs/` directory and can be viewed:
 
 ## 🛠️ Troubleshooting
 
+### Issue: "service 'airflow-init' didn't complete successfully: exit 1"
+
+This is usually caused by permission issues or database initialization problems.
+
+**Solutions:**
+
+1. **Set correct AIRFLOW_UID** (recommended):
+   ```bash
+   # Get your user ID
+   echo $UID
+   
+   # Set it before starting (Linux/Mac)
+   export AIRFLOW_UID=$(id -u)
+   docker-compose -f docker-compose.airflow.yml up -d
+   ```
+
+2. **Create required directories with correct permissions**:
+   ```bash
+   cd airflow
+   mkdir -p logs dags plugins config
+   chmod -R 777 logs plugins config  # Or set to your user
+   ```
+
+3. **Clean start** (if issues persist):
+   ```bash
+   # Stop and remove everything
+   docker-compose -f docker-compose.airflow.yml down -v
+   
+   # Clean directories
+   rm -rf logs/* plugins/* config/*
+   
+   # Restart with correct UID
+   export AIRFLOW_UID=$(id -u)
+   docker-compose -f docker-compose.airflow.yml up -d
+   ```
+
+4. **Check database initialization logs**:
+   ```bash
+   docker-compose -f docker-compose.airflow.yml logs airflow-init
+   ```
+
 ### Issue: DAGs not showing up
 - Check that DAG files are in `airflow/dags/` directory
 - Check scheduler logs: `docker-compose -f docker-compose.airflow.yml logs airflow-scheduler`

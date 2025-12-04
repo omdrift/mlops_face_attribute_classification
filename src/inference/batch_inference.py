@@ -61,20 +61,23 @@ def batch_inference():
     if not raw_dir.exists():
         raise FileNotFoundError(f"Directory not found: {raw_dir}")
     
-    # Get all image files
+    # Get all image files, excluding lot 1 (s1_*) which has labels
     image_extensions = ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG']
     all_images = []
     
     for ext in image_extensions:
-        all_images.extend(list(raw_dir.glob(f"*{ext}")))
+        for img_path in raw_dir.glob(f"*{ext}"):
+            # Exclude lot 1 images (starting with s1_)
+            if not img_path.name.startswith('s1_'):
+                all_images.append(img_path)
     
-    print(f"\n Found {len(all_images)} images in {raw_dir}")
+    print(f"\n Found {len(all_images)} images in {raw_dir} (excluding lot 1)")
     
     if len(all_images) == 0:
-        print(" Warning: No images found to process")
+        print(" Warning: No images found to process (excluding lot 1)")
         # Create empty output
         os.makedirs('outputs', exist_ok=True)
-        pd.DataFrame(columns=['filename', 'beard', 'mustache', 'glasses', 'hair_color', 'hair_length']).to_csv(
+        pd.DataFrame(columns=['filename', 'lot', 'beard', 'mustache', 'glasses', 'hair_color', 'hair_length']).to_csv(
             'outputs/predictions.csv', index=False
         )
         return
@@ -115,10 +118,15 @@ def batch_inference():
             hair_colors = torch.argmax(outputs['hair_color'], dim=1).cpu().numpy()
             hair_lengths = torch.argmax(outputs['hair_length'], dim=1).cpu().numpy()
             
-            # Store predictions
+            # Store predictions with lot information
             for i in range(len(batch_imgs)):
+                # Extract lot number from filename (e.g., s2_00001.png -> lot 2)
+                filename = batch_filenames[i]
+                lot_number = filename.split('_')[0] if '_' in filename else 'unknown'
+                
                 predictions.append({
-                    'filename': batch_filenames[i],
+                    'filename': filename,
+                    'lot': lot_number,
                     'beard': int(beards[i]),
                     'mustache': int(mustaches[i]),
                     'glasses': int(glasses[i]),
