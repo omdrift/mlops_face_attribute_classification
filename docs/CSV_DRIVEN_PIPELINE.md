@@ -2,14 +2,22 @@
 
 ## Overview
 
-This pipeline supports two key features:
-1. **CSV-driven training data**: Training is controlled entirely by `data/annotations/mapped_train.csv`
-2. **Incremental lot-based inference**: Batch inference processes lots incrementally without reprocessing existing predictions
+This pipeline supports three key features:
+1. **Label preparation pipeline**: Merge and map raw annotation CSVs
+2. **CSV-driven training data**: Training is controlled entirely by `data/annotations/mapped_train.csv`
+3. **Incremental lot-based inference**: Batch inference processes lots incrementally without reprocessing existing predictions
 
 ## Directory Structure
 
 ```
 data/
+├── labels_raw/         # Raw annotation CSV files (input)
+│   ├── batch1/
+│   │   ├── annotations_1.csv
+│   │   └── annotations_2.csv
+│   ├── batch2/
+│   │   └── annotations_3.csv
+│   └── ...
 ├── raw/
 │   ├── s1/           # Lot 1 images
 │   │   ├── s1_00000.png
@@ -21,14 +29,72 @@ data/
 │   └── s3/           # Lot 3 images
 │       └── ...
 ├── annotations/
-│   └── mapped_train.csv  # Training annotations
+│   ├── merged_labels.csv  # Merged raw annotations (intermediate)
+│   └── mapped_train.csv   # Final training annotations (cleaned & validated)
 └── processed/
-    └── train_data_s1.pt  # Processed training data
+    └── train_data_s1.pt   # Processed training data
 
 outputs/
-├── predictions_s1.csv    # Predictions for lot s1
-├── predictions_s2.csv    # Predictions for lot s2
-└── predictions_s3.csv    # Predictions for lot s3
+├── predictions_s1.csv     # Predictions for lot s1
+├── predictions_s2.csv     # Predictions for lot s2
+└── predictions_s3.csv     # Predictions for lot s3
+```
+
+## Label Preparation Pipeline
+
+### Step 1: Merge Raw Annotations
+
+When you receive new annotation CSV files, place them in `data/labels_raw/` organized by batch or source.
+
+Run the merge script to combine all CSV files:
+
+```bash
+python merge_annotations.py
+```
+
+This will:
+- Scan `data/labels_raw/` recursively for all CSV files
+- Merge them into a single DataFrame
+- Remove duplicates (keeping the most recent annotation)
+- Save to `data/annotations/merged_labels.csv`
+
+**Options:**
+```bash
+python merge_annotations.py --input-dir data/labels_raw --output data/annotations/merged_labels.csv --key-column filename
+```
+
+### Step 2: Map to Training Format
+
+After merging, map the annotations to the expected training format:
+
+```bash
+python map_annotations.py
+```
+
+This will:
+- Load `data/annotations/merged_labels.csv`
+- Clean filenames (remove artifacts like `.csv.png`)
+- Validate label values (beard, mustache, glasses: 0-1; hair_color: 0-4; hair_length: 0-2)
+- Remove invalid entries
+- Save to `data/annotations/mapped_train.csv`
+
+**Options:**
+```bash
+python map_annotations.py --input data/annotations/merged_labels.csv --output data/annotations/mapped_train.csv
+```
+
+### Complete Label Pipeline Workflow
+
+```bash
+# 1. Place new annotation CSV files in data/labels_raw/
+# 2. Merge all CSV files
+python merge_annotations.py
+
+# 3. Map to training format
+python map_annotations.py
+
+# 4. Now you can use the mapped_train.csv for training
+dvc repro prepare_train
 ```
 
 ## CSV-Driven Training
