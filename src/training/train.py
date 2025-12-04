@@ -148,11 +148,7 @@ def main():
     print(f" Train: {len(X_train)}, Val: {len(X_val)}")
     
     # Transforms
-    train_transforms = transforms.Compose([
-    transforms.RandomHorizontalFlip(p=0.5),
-    transforms.RandomRotation(10),
-])
-
+    train_transforms = None
 
     
     
@@ -194,8 +190,8 @@ def main():
         optimizer,
         mode='min',
         factor=0.5,  # Divise par 2 le LR
-        patience=3,  # Attend 3 epochs sans amélioration
-        min_lr=1e-6,
+        patience=2,  # Attend 3 epochs sans amélioration
+        min_lr=1e-7,
     )
     
     mlflow.set_tracking_uri("sqlite:///mlflow.db")

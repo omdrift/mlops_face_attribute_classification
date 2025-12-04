@@ -1,0 +1,123 @@
+{
+  "beard": {
+    "accuracy": 0.9985717686265175,
+    "confusion_matrix": [
+      [
+        2768,
+        2
+      ],
+      [
+        4,
+        1427
+      ]
+    ],
+    "support": 4201
+  },
+  "mustache": {
+    "accuracy": 0.9976196143775291,
+    "confusion_matrix": [
+      [
+        3053,
+        5
+      ],
+      [
+        5,
+        1138
+      ]
+    ],
+    "support": 4201
+  },
+  "glasses": {
+    "accuracy": 0.9985717686265175,
+    "confusion_matrix": [
+      [
+        2187,
+        2
+      ],
+      [
+        4,
+        2008
+      ]
+    ],
+    "support": 4201
+  },
+  "hair_color": {
+    "accuracy": 0.9973815758152821,
+    "confusion_matrix": [
+      [
+        1051,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        1,
+        1305,
+        1,
+        2,
+        0
+      ],
+      [
+        2,
+        3,
+        468,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        494,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        872
+      ]
+    ],
+    "per_class_accuracy": [
+      0.9981006647673314,
+      0.9969442322383499,
+      0.9894291754756871,
+      1.0,
+      1.0
+    ],
+    "support": 4201
+  },
+  "hair_length": {
+    "accuracy": 1.0,
+    "confusion_matrix": [
+      [
+        260,
+        0,
+        0
+      ],
+      [
+        0,
+        1507,
+        0
+      ],
+      [
+        0,
+        0,
+        2434
+      ]
+    ],
+    "per_class_accuracy": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "support": 4201
+  },
+  "overall": {
+    "average_accuracy": 0.9984289454891693,
+    "test_size": 4201,
+    "model_path": "models/best_model.pth"
+  }
+}
