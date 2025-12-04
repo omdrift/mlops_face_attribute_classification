@@ -161,7 +161,7 @@ def process_training_data():
     
     # 3. Sauvegarder
     if len(images_list) > 0:
-        print(f"\n💾 Sauvegarde des données...")
+        print(f"\n[*] Sauvegarde des données...")
         X = torch.tensor(np.array(images_list)).permute(0, 3, 1, 2)  # (N, C, H, W)
         y = torch.tensor(np.array(labels_list), dtype=torch.long)
         
@@ -173,11 +173,11 @@ def process_training_data():
             'filenames': processed_filenames
         }, output_path)
         
-        print(f"✅ Sauvegardé: {output_path}")
+        print(f"[+] Sauvegardé: {output_path}")
         print(f"   Shape X: {X.shape}")
         print(f"   Shape y: {y.shape}")
     else:
-        print("❌ Aucune image traitée!")
+        print("[-] Aucune image traitée!")
         return
     
     # 4. Afficher le résumé
@@ -185,18 +185,18 @@ def process_training_data():
     print("RÉSUMÉ DU TRAITEMENT")
     print(f"{'='*60}")
     print(f"  Total annotations dans CSV: {stats['total']}")
-    print(f"  ✅ Succès: {stats['success']}")
-    print(f"  ❌ Non trouvées: {stats['not_found']}")
-    print(f"  ❌ Échec de lecture: {stats['decode_failed']}")
-    print(f"  ❌ Échec de prétraitement: {stats['crop_failed']}")
+    print(f"  [+] Succès: {stats['success']}")
+    print(f"  [-] Non trouvées: {stats['not_found']}")
+    print(f"  [-] Échec de lecture: {stats['decode_failed']}")
+    print(f"  [-] Échec de prétraitement: {stats['crop_failed']}")
     
     if missing_files:
-        print(f"\n⚠️  Fichiers manquants (premiers 10):")
+        print(f"\n[!] Fichiers manquants (premiers 10):")
         for f in missing_files[:10]:
             print(f"     - {f}")
     
     if failed_files:
-        print(f"\n⚠️  Fichiers en échec (premiers 10):")
+        print(f"\n[!] Fichiers en échec (premiers 10):")
         for f in failed_files[:10]:
             print(f"     - {f}")
     

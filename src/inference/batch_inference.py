@@ -19,6 +19,7 @@ import torch
 import numpy as np
 import pandas as pd
 import cv2
+import yaml
 from pathlib import Path
 from tqdm import tqdm
 
@@ -139,7 +140,7 @@ def process_lot_inference(model, lot_name, lot_images, training_images, batch_si
     batch_imgs = []
     batch_filenames = []
     
-    print(f"\n🔄 Processing lot {lot_name} ({len(lot_images)} images)...")
+    print(f"\n>> Processing lot {lot_name} ({len(lot_images)} images)...")
     
     for img_path in tqdm(lot_images, desc=f"Lot {lot_name}"):
         # Check if we should skip this image (already in training)
@@ -207,8 +208,18 @@ def batch_inference():
     raw_dir = "data/raw"
     output_dir = "outputs"
     training_csv = "data/annotations/mapped_train.csv"
-    batch_size = 64
     skip_training_images = True  # Skip images already in training set
+    
+    # Load batch_size from params.yaml if available, otherwise use default
+    batch_size = 64
+    try:
+        with open('params.yaml', 'r') as f:
+            params = yaml.safe_load(f)
+            if 'inference' in params and 'batch_size' in params['inference']:
+                batch_size = params['inference']['batch_size']
+                print(f" Batch size from params.yaml: {batch_size}")
+    except Exception:
+        pass  # Use default if params.yaml not found or doesn't have the parameter
     
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
@@ -221,15 +232,15 @@ def batch_inference():
             f"Run: dvc repro train"
         )
     
-    print(f"\n📦 Loading model from {model_path}...")
+    print(f"\n[*] Loading model from {model_path}...")
     model = CustomMultiHeadCNN(n_color=5, n_length=3).to(DEVICE)
     checkpoint = torch.load(model_path, map_location=DEVICE)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    print(f"✅ Model loaded successfully!")
+    print(f"[+] Model loaded successfully!")
     
     # Detect lot directories
-    print(f"\n📁 Detecting lot directories in {raw_dir}...")
+    print(f"\n[*] Detecting lot directories in {raw_dir}...")
     lot_dirs = get_lot_directories(raw_dir)
     
     if not lot_dirs:
@@ -240,7 +251,7 @@ def batch_inference():
     print(f"   Found {len(lot_dirs)} lot directories: {lot_dirs}")
     
     # Check existing predictions
-    print(f"\n🔍 Checking for existing predictions in {output_dir}...")
+    print(f"\n[*] Checking for existing predictions in {output_dir}...")
     existing_predictions = get_existing_predictions(output_dir)
     
     if existing_predictions:
@@ -252,18 +263,18 @@ def batch_inference():
     lots_to_process = [lot for lot in lot_dirs if lot not in existing_predictions]
     
     if not lots_to_process:
-        print(f"\n✅ All lots already have predictions. Nothing to do!")
+        print(f"\n[+] All lots already have predictions. Nothing to do!")
         print(f"   To reprocess a lot, delete its predictions_sX.csv file.")
         return
     
-    print(f"\n🎯 Lots to process: {lots_to_process}")
+    print(f"\n[*] Lots to process: {lots_to_process}")
     lots_skipped = [lot for lot in lot_dirs if lot in existing_predictions]
     if lots_skipped:
         print(f"   Skipping (already processed): {lots_skipped}")
     
     # Load training images (to optionally skip them)
     if skip_training_images:
-        print(f"\n📋 Loading training images from {training_csv}...")
+        print(f"\n[*] Loading training images from {training_csv}...")
         training_images = get_training_images(training_csv)
         if training_images:
             print(f"   Will skip {len(training_images)} images already in training set")
@@ -298,12 +309,12 @@ def batch_inference():
         output_path = os.path.join(output_dir, f"predictions_{lot_name}.csv")
         df_predictions.to_csv(output_path, index=False)
         
-        print(f"\n✅ Saved {len(df_predictions)} predictions to: {output_path}")
+        print(f"\n[+] Saved {len(df_predictions)} predictions to: {output_path}")
         total_predictions += len(df_predictions)
         
         # Print statistics for this lot
         if len(df_predictions) > 0:
-            print(f"\n📊 Statistics for {lot_name}:")
+            print(f"\n[*] Statistics for {lot_name}:")
             print(f"   Beard:        {df_predictions['beard'].sum()} / {len(df_predictions)} ({df_predictions['beard'].mean()*100:.1f}%)")
             print(f"   Mustache:     {df_predictions['mustache'].sum()} / {len(df_predictions)} ({df_predictions['mustache'].mean()*100:.1f}%)")
             print(f"   Glasses:      {df_predictions['glasses'].sum()} / {len(df_predictions)} ({df_predictions['glasses'].mean()*100:.1f}%)")
