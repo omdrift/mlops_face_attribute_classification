@@ -262,12 +262,13 @@ def batch_inference():
         print(f"   Skipping (already processed): {lots_skipped}")
     
     # Load training images (to optionally skip them)
-    training_images = set()
     if skip_training_images:
         print(f"\n📋 Loading training images from {training_csv}...")
         training_images = get_training_images(training_csv)
         if training_images:
             print(f"   Will skip {len(training_images)} images already in training set")
+    else:
+        training_images = set()
     
     # Process each lot
     total_predictions = 0

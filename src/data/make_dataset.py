@@ -36,19 +36,19 @@ def preprocess_image(img, size=64):
     """Prétraite une image avec gestion d'erreurs"""
     
     if img is None:
-            return None
+        return None
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     thresh = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)[1]
     coords = cv2.findNonZero(thresh)
-        
+    
     if coords is not None:
-            x, y, w, h = cv2.boundingRect(coords)
-            cropped = img[y:y+h, x:x+w]
+        x, y, w, h = cv2.boundingRect(coords)
+        cropped = img[y:y+h, x:x+w]
     else:
-            # Pas de contour détecté, prendre l'image entière
-            cropped = img
-        
+        # Pas de contour détecté, prendre l'image entière
+        cropped = img
+    
     resized = cv2.resize(cropped, (size, size))
     return resized.astype("float32") / 255.0
 
