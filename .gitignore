@@ -17,6 +17,7 @@ mlruns/
 venv/*.zip
 *.zip
 .dvc/
+.dvc/
 venv/
 .coverage
 venv/
@@ -27,3 +28,8 @@ airflow/logs/
 airflow/plugins/
 airflow/config/
 mlflow.db
+htmlcov/
+mlflow/
+mlflow.
+mlflow.db
+.pytest_cache/  
