@@ -36,3 +36,27 @@ stages:
     metrics:
       - metrics/train_metrics.json:
           cache: false
+  evaluate:
+    cmd: python src/training/evaluate.py
+    deps:
+      - models/best_model.pth
+      - data/processed/train_data_s1.pt
+      - src/training/evaluate.py
+    params:
+      - evaluate.test_size
+      - evaluate.random_state
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
+
+  inference_batches:
+    cmd: python src/inference/batch_inference.py
+    deps:
+      - models/best_model.pth
+      - data/raw
+      - src/inference/batch_inference.py
+    params:
+      - inference.batch_size
+      - inference.output_path
+    outs:
+      - outputs/predictions.csv

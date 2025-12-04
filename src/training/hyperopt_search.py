@@ -145,7 +145,7 @@ def objective(params):
     )
     
     # Entraînement rapide (3 epochs pour hyperopt)
-    QUICK_EPOCHS = 3
+    QUICK_EPOCHS = 5
     best_val_loss = float('inf')
     best_val_accs = {}
     
