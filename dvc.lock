@@ -9,13 +9,13 @@ stages:
       size: 483137
     - path: data/raw
       hash: md5
-      md5: 90e1873184de659efc1794b2a0058212.dir
+      md5: ac6376f05cf4514e09167ce8c71b11fa.dir
       size: 7337657880
       nfiles: 100006
     - path: src/data/make_dataset.py
       hash: md5
-      md5: 0d5bf265e72dfdd227ea1fc98e64e6cd
-      size: 4921
+      md5: 0afbcf4fbbc724bacda07b0b1344073b
+      size: 5119
     outs:
     - path: data/processed/train_data_s1.pt
       hash: md5
@@ -111,9 +111,13 @@ stages:
   inference_batches:
     cmd: python src/inference/batch_inference.py
     deps:
+    - path: data/annotations/mapped_train.csv
+      hash: md5
+      md5: 64c7d882c6af9a414d73d53b918a0fa6
+      size: 483137
     - path: data/raw
       hash: md5
-      md5: 90e1873184de659efc1794b2a0058212.dir
+      md5: ac6376f05cf4514e09167ce8c71b11fa.dir
       size: 7337657880
       nfiles: 100006
     - path: models/best_model.pth
@@ -122,14 +126,14 @@ stages:
       size: 62893220
     - path: src/inference/batch_inference.py
       hash: md5
-      md5: 19257054761a709bca07f80ddd00d193
-      size: 5796
+      md5: 37005e29def1f8a438a9aed8e35a6875
+      size: 11447
     params:
       params.yaml:
         inference.batch_size: 64
-        inference.output_path: outputs/predictions.csv
     outs:
-    - path: outputs/predictions.csv
+    - path: outputs/
       hash: md5
-      md5: c20f584f4c12b21be709bd97179aea50
-      size: 2300055
+      md5: f458457ac4e571519ed379ada5aa371f.dir
+      size: 1817318
+      nfiles: 9

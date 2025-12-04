@@ -55,8 +55,9 @@ stages:
       - models/best_model.pth
       - data/raw
       - src/inference/batch_inference.py
+      - data/annotations/mapped_train.csv
     params:
       - inference.batch_size
-      - inference.output_path
     outs:
-      - outputs/predictions.csv
+      - outputs/:
+          cache: false
