@@ -144,8 +144,8 @@ def process_lot_inference(model, lot_name, lot_images, training_images, batch_si
     
     for img_path in tqdm(lot_images, desc=f"Lot {lot_name}"):
         # Check if we should skip this image (already in training)
-        relative_filename = f"{lot_name}/{img_path.name}"
-        if skip_training and relative_filename in training_images:
+        # The training CSV contains just filenames like 's1_00000.png', not 's1/s1_00000.png'
+        if skip_training and img_path.name in training_images:
             continue
         
         # Load and preprocess image

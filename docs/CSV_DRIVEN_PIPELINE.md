@@ -37,20 +37,22 @@ outputs/
 
 Training data is determined **only** by what's listed in `data/annotations/mapped_train.csv`. The CSV should have these columns:
 
-- `filename`: Relative path from `data/raw/` (e.g., `s1/img_001.png`)
+- `filename`: Just the image filename (e.g., `s1_00000.png`). The lot subdirectory is automatically determined from the filename prefix.
 - `beard`: Binary label (0 or 1)
 - `mustache`: Binary label (0 or 1)
 - `glasses_binary`: Binary label (0 or 1)
 - `hair_color_label`: Multi-class label (0-4)
 - `hair_length`: Multi-class label (0-2)
 
+**Note:** Images are stored in lot subdirectories like `data/raw/s1/`, `data/raw/s2/`, etc. The CSV only contains the filename (e.g., `s1_00000.png`), and the code automatically constructs the path as `data/raw/s1/s1_00000.png` by extracting the lot prefix from the filename.
+
 ### Example CSV
 
 ```csv
 filename,beard,mustache,glasses_binary,hair_color_label,hair_length
-s1/s1_00000.png,1,1,1,0,1
-s1/s1_00001.png,0,0,1,0,2
-s2/s2_00005.png,0,0,0,4,2
+s1_00000.png,1,1,1,0,1
+s1_00001.png,0,0,1,0,2
+s2_00005.png,0,0,0,4,2
 ```
 
 ### Adding New Training Data

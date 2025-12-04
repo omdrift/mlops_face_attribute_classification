@@ -57,19 +57,31 @@ def find_image_in_raw(filename, raw_dir):
     """
     Constructs the full path to an image in data/raw.
     
-    The filename should be a relative path from data/raw (e.g., 's1/img_001.png').
-    Returns the full path if the file exists, None otherwise.
+    The filename is just the image name (e.g., 's1_00000.png').
+    The lot is extracted from the filename prefix (e.g., 's1' from 's1_00000.png').
+    The actual path is constructed as: data/raw/{lot}/{filename}
     
     Args:
-        filename: Relative path from raw_dir (can include subdirectories)
+        filename: Just the image filename (e.g., 's1_00000.png')
         raw_dir: Root directory for raw images
         
     Returns:
         Full path to image if it exists, None otherwise
     """
     raw_path = Path(raw_dir)
-    full_path = raw_path / filename
     
+    # Extract lot from filename (e.g., 's1' from 's1_00000.png')
+    # The lot is the prefix before the first underscore and after 's'
+    lot = filename.split('_')[0] if '_' in filename else None
+    
+    if lot:
+        # Construct path as: data/raw/{lot}/{filename}
+        full_path = raw_path / lot / filename
+        if full_path.exists():
+            return str(full_path)
+    
+    # Fallback: try direct path in case structure is different
+    full_path = raw_path / filename
     if full_path.exists():
         return str(full_path)
     

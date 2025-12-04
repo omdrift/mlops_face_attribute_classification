@@ -21,31 +21,31 @@ class TestCSVDrivenDataset:
     """Test cases for CSV-driven dataset building"""
     
     def test_find_image_in_raw_with_subfolder(self, tmp_path):
-        """Test finding images in lot subdirectories"""
-        # Create test structure
+        """Test finding images in lot subdirectories with lot prefix extraction"""
         raw_dir = tmp_path / "data" / "raw"
         lot_dir = raw_dir / "s1"
         lot_dir.mkdir(parents=True)
         
-        # Create a test image
-        test_img = lot_dir / "test_image.png"
+        # Create a test image with lot prefix in filename
+        test_img = lot_dir / "s1_00000.png"
         test_img.touch()
         
-        # Test finding the image with relative path
-        result = find_image_in_raw("s1/test_image.png", str(raw_dir))
+        # Test finding the image with just the filename (lot extracted from filename)
+        result = find_image_in_raw("s1_00000.png", str(raw_dir))
         assert result is not None
-        assert "test_image.png" in result
+        assert "s1_00000.png" in result
+        assert str(lot_dir) in result
         
     def test_find_image_in_raw_not_found(self, tmp_path):
         """Test handling of missing images"""
         raw_dir = tmp_path / "data" / "raw"
         raw_dir.mkdir(parents=True)
         
-        result = find_image_in_raw("nonexistent/image.png", str(raw_dir))
+        result = find_image_in_raw("nonexistent_image.png", str(raw_dir))
         assert result is None
     
     def test_find_image_in_raw_at_root(self, tmp_path):
-        """Test finding images directly at raw root"""
+        """Test finding images directly at raw root (fallback)"""
         raw_dir = tmp_path / "data" / "raw"
         raw_dir.mkdir(parents=True)
         
@@ -82,7 +82,7 @@ class TestCSVDrivenDataset:
         # Create a test CSV with required columns
         csv_path = tmp_path / "test.csv"
         df = pd.DataFrame({
-            'filename': ['s1/img1.png', 's1/img2.png'],
+            'filename': ['s1_00000.png', 's1_00001.png'],
             'beard': [1, 0],
             'mustache': [0, 1],
             'glasses_binary': [1, 0],
@@ -100,13 +100,13 @@ class TestCSVDrivenDataset:
             assert col in loaded_df.columns
         
         assert len(loaded_df) == 2
-        assert loaded_df['filename'][0] == 's1/img1.png'
+        assert loaded_df['filename'][0] == 's1_00000.png'
     
     def test_csv_with_multiple_lots(self, tmp_path):
         """Test CSV can contain images from multiple lots"""
         csv_path = tmp_path / "test.csv"
         df = pd.DataFrame({
-            'filename': ['s1/img1.png', 's2/img1.png', 's3/img1.png'],
+            'filename': ['s1_00000.png', 's2_00001.png', 's3_00002.png'],
             'beard': [1, 0, 1],
             'mustache': [0, 1, 0],
             'glasses_binary': [1, 0, 1],
@@ -118,7 +118,8 @@ class TestCSVDrivenDataset:
         loaded_df = pd.read_csv(csv_path)
         
         # Check we have entries from different lots
-        lots = loaded_df['filename'].str.split('/').str[0].unique()
+        # Extract lot prefix from filenames (s1, s2, s3)
+        lots = loaded_df['filename'].str.split('_').str[0].unique()
         assert len(lots) == 3
         assert 's1' in lots
         assert 's2' in lots

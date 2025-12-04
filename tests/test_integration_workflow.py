@@ -59,7 +59,7 @@ class TestIntegrationWorkflow:
         for lot_num in [1, 2]:
             for img_num in [0, 1, 2]:  # Only first 3 images from each lot
                 training_data.append({
-                    'filename': f's{lot_num}/s{lot_num}_{img_num:05d}.png',
+                    'filename': f's{lot_num}_{img_num:05d}.png',
                     'beard': np.random.randint(0, 2),
                     'mustache': np.random.randint(0, 2),
                     'glasses_binary': np.random.randint(0, 2),
@@ -73,8 +73,8 @@ class TestIntegrationWorkflow:
         # 3. Verify CSV reading and image finding
         training_images = get_training_images(str(csv_path))
         assert len(training_images) == 6  # 3 from s1 + 3 from s2
-        assert 's1/s1_00000.png' in training_images
-        assert 's2/s2_00002.png' in training_images
+        assert 's1_00000.png' in training_images
+        assert 's2_00002.png' in training_images
         
         # Verify we can find these images
         for filename in training_images:
@@ -171,11 +171,11 @@ class TestIntegrationWorkflow:
             lot_dir = raw_dir / f"s{lot_num}"
             lot_dir.mkdir(parents=True)
             for img_num in range(5):
-                (lot_dir / f"img_{img_num}.png").touch()
+                (lot_dir / f"s{lot_num}_{img_num:05d}.png").touch()
         
         # Initial CSV with 2 images
         df_initial = pd.DataFrame({
-            'filename': ['s1/img_0.png', 's1/img_1.png'],
+            'filename': ['s1_00000.png', 's1_00001.png'],
             'beard': [1, 0],
             'mustache': [0, 1],
             'glasses_binary': [1, 0],
@@ -190,7 +190,7 @@ class TestIntegrationWorkflow:
         
         # Update CSV to add more images
         df_updated = pd.DataFrame({
-            'filename': ['s1/img_0.png', 's1/img_1.png', 's2/img_0.png', 's2/img_1.png'],
+            'filename': ['s1_00000.png', 's1_00001.png', 's2_00000.png', 's2_00001.png'],
             'beard': [1, 0, 1, 1],
             'mustache': [0, 1, 0, 0],
             'glasses_binary': [1, 0, 1, 1],
@@ -202,8 +202,8 @@ class TestIntegrationWorkflow:
         # Load and verify updated
         training_imgs = get_training_images(str(csv_path))
         assert len(training_imgs) == 4
-        assert 's2/img_0.png' in training_imgs
-        assert 's2/img_1.png' in training_imgs
+        assert 's2_00000.png' in training_imgs
+        assert 's2_00001.png' in training_imgs
     
     def test_reprocessing_workflow(self, tmp_path):
         """
