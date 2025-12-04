@@ -66,7 +66,7 @@ def get_training_images(csv_path):
         if 'filename' in df.columns:
             return set(df['filename'].tolist())
     except Exception as e:
-        print(f"⚠️  Warning: Could not read training CSV: {e}")
+        print(f"[!] Warning: Could not read training CSV: {e}")
     
     return set()
 
@@ -244,7 +244,7 @@ def batch_inference():
     lot_dirs = get_lot_directories(raw_dir)
     
     if not lot_dirs:
-        print(f"⚠️  No lot directories found in {raw_dir}")
+        print(f"[!] No lot directories found in {raw_dir}")
         print(f"   Expected directories like s1/, s2/, s3/, etc.")
         return
     
@@ -292,7 +292,7 @@ def batch_inference():
         lot_images = get_images_in_lot(raw_dir, lot_name)
         
         if not lot_images:
-            print(f"⚠️  No images found in {lot_name}, skipping...")
+            print(f"[!] No images found in {lot_name}, skipping...")
             continue
         
         # Run inference

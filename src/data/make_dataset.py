@@ -113,7 +113,7 @@ def process_training_data():
     processed_filenames = []
     
     # 2. Traiter chaque image listée dans le CSV
-    print(f"\n🔄 Traitement des images listées dans le CSV...")
+    print(f"\n[*] Traitement des images listées dans le CSV...")
     
     for idx, row in tqdm(df.iterrows(), total=len(df), desc="Processing"):
         filename = row['filename']
