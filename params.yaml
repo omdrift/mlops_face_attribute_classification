@@ -1,6 +1,15 @@
 hyperopt:
-  max_evals: 10
+  max_evals: 20
 
 train:
   epochs: 10
   batch_size: 32
+
+
+evaluate:
+  test_size: 0.2
+  random_state: 42
+
+inference:
+  batch_size: 64
+  output_path: outputs/predictions.csv

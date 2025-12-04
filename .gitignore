@@ -20,6 +20,14 @@ venv/*.zip
 .dvc/
 venv/
 .coverage
+venv/
+outputs/*.csv
+outputs/*.json
+!outputs/.gitkeep
+airflow/logs/
+airflow/plugins/
+airflow/config/
+mlflow.db
 htmlcov/
 mlflow/
 mlflow.

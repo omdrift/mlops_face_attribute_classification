@@ -9,9 +9,9 @@ stages:
       size: 483137
     - path: data/raw
       hash: md5
-      md5: 9b357d57fdbe9faf7fe06e577e60916a.dir
-      size: 6685465031
-      nfiles: 69076
+      md5: 90e1873184de659efc1794b2a0058212.dir
+      size: 7337657880
+      nfiles: 100006
     - path: src/data/make_dataset.py
       hash: md5
       md5: 0d5bf265e72dfdd227ea1fc98e64e6cd
@@ -34,7 +34,7 @@ stages:
       size: 4593
     - path: src/training/hyperopt_search.py
       hash: md5
-      md5: 9727511717c0bb131abd4cec236bb723
+      md5: f8834bbb5e8a6cb0321542a5050ff19a
       size: 12766
     - path: src/training/loops.py
       hash: md5
@@ -42,11 +42,11 @@ stages:
       size: 6049
     params:
       params.yaml:
-        hyperopt.max_evals: 10
+        hyperopt.max_evals: 20
     outs:
     - path: src/training/hyperopt_params.json
       hash: md5
-      md5: f79453df1245684fb251f5a473d464ff
+      md5: 393204b8aeb699b1147dbf62e786c7cb
       size: 210
   train:
     cmd: python src/training/train.py
@@ -61,7 +61,7 @@ stages:
       size: 4593
     - path: src/training/hyperopt_params.json
       hash: md5
-      md5: f79453df1245684fb251f5a473d464ff
+      md5: 393204b8aeb699b1147dbf62e786c7cb
       size: 210
     - path: src/training/loops.py
       hash: md5
@@ -69,8 +69,8 @@ stages:
       size: 6049
     - path: src/training/train.py
       hash: md5
-      md5: 6f2a9ad121db7289a2d124db92d056a2
-      size: 13302
+      md5: 4e815e343dae5eb5d392043cdc3c892b
+      size: 14822
     params:
       params.yaml:
         train.batch_size: 32
@@ -78,9 +78,58 @@ stages:
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 674cc1c921eb25fd7af00b63cd230c88
-      size: 386
+      md5: f8f95673be4f0b60e64a8ffc9912cb79
+      size: 385
     - path: models/best_model.pth
       hash: md5
-      md5: b83b082a91de35c226012e855f43e9d4
+      md5: 2126d7b1d7c844ba9ff3d548f805f872
       size: 62893220
+  evaluate:
+    cmd: python src/training/evaluate.py
+    deps:
+    - path: data/processed/train_data_s1.pt
+      hash: md5
+      md5: 7ad1a90a1576d5dd099d80ad6e7254b1
+      size: 1033643029
+    - path: models/best_model.pth
+      hash: md5
+      md5: 2126d7b1d7c844ba9ff3d548f805f872
+      size: 62893220
+    - path: src/training/evaluate.py
+      hash: md5
+      md5: cd626520a55c1cc53350420539f84564
+      size: 5656
+    params:
+      params.yaml:
+        evaluate.random_state: 42
+        evaluate.test_size: 0.2
+    outs:
+    - path: metrics/eval_metrics.json
+      hash: md5
+      md5: a11f67f3faa1ac66fad6621c0152782d
+      size: 1631
+  inference_batches:
+    cmd: python src/inference/batch_inference.py
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 90e1873184de659efc1794b2a0058212.dir
+      size: 7337657880
+      nfiles: 100006
+    - path: models/best_model.pth
+      hash: md5
+      md5: 2126d7b1d7c844ba9ff3d548f805f872
+      size: 62893220
+    - path: src/inference/batch_inference.py
+      hash: md5
+      md5: 19257054761a709bca07f80ddd00d193
+      size: 5796
+    params:
+      params.yaml:
+        inference.batch_size: 64
+        inference.output_path: outputs/predictions.csv
+    outs:
+    - path: outputs/predictions.csv
+      hash: md5
+      md5: 39f08fa6411e408e112a70aeddec3903
+      size: 2300055
