@@ -9,7 +9,7 @@ stages:
       size: 483137
     - path: data/raw
       hash: md5
-      md5: b96ae893261ee1be5e2792ec05a91613.dir
+      md5: ac6376f05cf4514e09167ce8c71b11fa.dir
       size: 7337657880
       nfiles: 100006
     - path: src/data/make_dataset.py
@@ -117,7 +117,7 @@ stages:
       size: 483137
     - path: data/raw
       hash: md5
-      md5: b96ae893261ee1be5e2792ec05a91613.dir
+      md5: ac6376f05cf4514e09167ce8c71b11fa.dir
       size: 7337657880
       nfiles: 100006
     - path: models/best_model.pth
@@ -134,6 +134,6 @@ stages:
     outs:
     - path: outputs/
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: f458457ac4e571519ed379ada5aa371f.dir
+      size: 1817318
+      nfiles: 9
