@@ -18,6 +18,15 @@ import pandas as pd
 from pathlib import Path
 
 
+# Label value constraints
+BINARY_LABELS = ['beard', 'mustache', 'glasses_binary']
+BINARY_VALUES = [0, 1]
+HAIR_COLOR_VALUES = [0, 1, 2, 3, 4]
+HAIR_LENGTH_VALUES = [0, 1, 2]
+REQUIRED_COLUMNS = ['filename', 'beard', 'mustache', 'glasses_binary', 
+                   'hair_color_label', 'hair_length']
+
+
 def load_merged_labels(input_path: str) -> pd.DataFrame:
     """
     Load the merged labels CSV file.
@@ -93,10 +102,7 @@ def validate_labels(df: pd.DataFrame) -> pd.DataFrame:
     
     print("\n[*] Validating labels...")
     
-    required_columns = ['filename', 'beard', 'mustache', 'glasses_binary', 
-                       'hair_color_label', 'hair_length']
-    
-    missing_columns = [col for col in required_columns if col not in df.columns]
+    missing_columns = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     
     if missing_columns:
         print(f"    [!] Missing required columns: {missing_columns}")
@@ -105,7 +111,7 @@ def validate_labels(df: pd.DataFrame) -> pd.DataFrame:
     initial_count = len(df)
     
     # Remove rows with NaN in any label column
-    df = df.dropna(subset=required_columns)
+    df = df.dropna(subset=REQUIRED_COLUMNS)
     
     rows_removed = initial_count - len(df)
     
@@ -113,25 +119,25 @@ def validate_labels(df: pd.DataFrame) -> pd.DataFrame:
         print(f"    [!] Removed {rows_removed} row(s) with missing labels")
     
     # Validate binary labels (beard, mustache, glasses_binary)
-    for col in ['beard', 'mustache', 'glasses_binary']:
-        invalid_mask = ~df[col].isin([0, 1])
+    for col in BINARY_LABELS:
+        invalid_mask = ~df[col].isin(BINARY_VALUES)
         if invalid_mask.any():
             invalid_count = invalid_mask.sum()
-            print(f"    [!] Found {invalid_count} invalid value(s) in '{col}' (not 0 or 1)")
+            print(f"    [!] Found {invalid_count} invalid value(s) in '{col}' (not in {BINARY_VALUES})")
             df = df[~invalid_mask]
     
-    # Validate hair_color_label (0-4)
-    invalid_hair_color = ~df['hair_color_label'].isin([0, 1, 2, 3, 4])
+    # Validate hair_color_label
+    invalid_hair_color = ~df['hair_color_label'].isin(HAIR_COLOR_VALUES)
     if invalid_hair_color.any():
         invalid_count = invalid_hair_color.sum()
-        print(f"    [!] Found {invalid_count} invalid value(s) in 'hair_color_label' (not 0-4)")
+        print(f"    [!] Found {invalid_count} invalid value(s) in 'hair_color_label' (not in {HAIR_COLOR_VALUES})")
         df = df[~invalid_hair_color]
     
-    # Validate hair_length (0-2)
-    invalid_hair_length = ~df['hair_length'].isin([0, 1, 2])
+    # Validate hair_length
+    invalid_hair_length = ~df['hair_length'].isin(HAIR_LENGTH_VALUES)
     if invalid_hair_length.any():
         invalid_count = invalid_hair_length.sum()
-        print(f"    [!] Found {invalid_count} invalid value(s) in 'hair_length' (not 0-2)")
+        print(f"    [!] Found {invalid_count} invalid value(s) in 'hair_length' (not in {HAIR_LENGTH_VALUES})")
         df = df[~invalid_hair_length]
     
     print(f"    [+] Valid labels: {len(df)}")
@@ -154,12 +160,8 @@ def map_to_training_format(df: pd.DataFrame) -> pd.DataFrame:
     
     print("\n[*] Mapping to training format...")
     
-    # Ensure columns are in the expected order
-    expected_columns = ['filename', 'beard', 'mustache', 'glasses_binary', 
-                       'hair_color_label', 'hair_length']
-    
     # Select and reorder columns
-    df_mapped = df[expected_columns].copy()
+    df_mapped = df[REQUIRED_COLUMNS].copy()
     
     # Convert to appropriate types
     df_mapped['beard'] = df_mapped['beard'].astype(int)
@@ -206,10 +208,14 @@ def save_mapped_labels(df: pd.DataFrame, output_path: str):
     
     # Show lot distribution
     if 'filename' in df.columns:
-        lots = df['filename'].str.split('_').str[0].value_counts()
-        print(f"\n[*] Images per lot:")
-        for lot, count in lots.items():
-            print(f"    {lot}: {count} images")
+        try:
+            # Extract lot from filename (e.g., 's1' from 's1_00000.png')
+            lots = df['filename'].str.split('_').str[0].value_counts()
+            print(f"\n[*] Images per lot:")
+            for lot, count in lots.items():
+                print(f"    {lot}: {count} images")
+        except Exception as e:
+            print(f"\n[!] Could not extract lot distribution: {e}")
 
 
 def main():

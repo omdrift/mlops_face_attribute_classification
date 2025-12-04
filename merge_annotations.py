@@ -74,7 +74,7 @@ def merge_csv_files(csv_files: List[Path]) -> pd.DataFrame:
             dataframes.append(df)
             print(f"    - {csv_file.name}: {rows} rows")
         except Exception as e:
-            print(f"    [!] Error reading {csv_file.name}: {e}")
+            print(f"    [!] Error reading {csv_file} ({csv_file.name}): {type(e).__name__}: {e}")
             continue
     
     if not dataframes:
