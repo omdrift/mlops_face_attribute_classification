@@ -577,3 +577,6 @@ For questions or issues:
    - Environment details (OS, Python version, etc.)
 
 ---
+
+
+<video src="Capture vidéo du 2025-12-04 21-42-32.webm" controls width="600"></video>
