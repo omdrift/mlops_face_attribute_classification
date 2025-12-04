@@ -120,6 +120,7 @@ This project provides an end-to-end machine learning pipeline for facial attribu
 
 1. **Clone the repository:**
    ```bash
+   # Clone from GitHub (replace with your fork if contributing)
    git clone https://github.com/omdrift/mlops_face_attribute_classification.git
    cd mlops_face_attribute_classification
    ```
@@ -413,7 +414,8 @@ The project includes Apache Airflow DAGs for automated ML pipeline orchestration
 
 3. **Access Airflow UI:**
    - URL: `http://localhost:8080`
-   - Default credentials: `admin` / `admin` (check docker-compose file)
+   - Default credentials: `admin` / `admin` (check `docker-compose.airflow.yml` file)
+   - **⚠️ Security Note**: Change default credentials in production deployments
 
 ### Available DAGs
 
@@ -573,7 +575,7 @@ For open-source projects, consider using:
 ### Getting Help
 
 For questions or issues:
-1. Check existing [GitHub Issues](https://github.com/omdrift/mlops_face_attribute_classification/issues)
+1. Check existing GitHub Issues in this repository
 2. Create a new issue with:
    - Clear description of the problem
    - Steps to reproduce
