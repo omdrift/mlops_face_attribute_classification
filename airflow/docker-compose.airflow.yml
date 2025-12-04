@@ -77,9 +77,43 @@ services:
     command:
       - -c
       - |
-        mkdir -p /sources/logs /sources/dags /sources/plugins
-        chown -R "${AIRFLOW_UID:-50000}:0" /sources/{logs,dags,plugins}
-        exec /entrypoint airflow version
+        # Function to wait for postgres
+        function wait_for_postgres() {
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h postgres -U airflow; then
+              echo "PostgreSQL is ready!"
+              return 0
+            fi
+            echo "Attempt $i/30: PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "ERROR: PostgreSQL did not become ready in time"
+          return 1
+        }
+        
+        # Wait for PostgreSQL
+        wait_for_postgres || exit 1
+        
+        # Create directories
+        mkdir -p /sources/logs /sources/dags /sources/plugins /sources/config
+        
+        # Set ownership (only if running as root)
+        if [ "$(id -u)" = "0" ]; then
+          chown -R "${AIRFLOW_UID:-50000}:0" /sources/{logs,dags,plugins,config} 2>/dev/null || true
+        fi
+        
+        # Initialize database and create user
+        airflow db init
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME:-airflow}" \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD:-airflow}" 2>/dev/null || echo "User already exists"
+        
+        echo "✅ Airflow initialization completed successfully!"
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'

@@ -19,10 +19,26 @@ The ML pipeline consists of the following stages:
 - Docker and Docker Compose installed
 - At least 4GB of RAM available for Docker
 
-### 1. Start Airflow
+### 1. Start Airflow (Recommended Method)
+
+Use the provided startup script which handles all initialization:
 
 ```bash
 cd airflow
+./start_airflow.sh
+```
+
+This script will:
+- Set the correct `AIRFLOW_UID`
+- Create required directories
+- Set proper permissions
+- Start all services
+- Check initialization status
+
+**Alternative (Manual Method):**
+```bash
+cd airflow
+export AIRFLOW_UID=$(id -u)
 docker-compose -f docker-compose.airflow.yml up -d
 ```
 
@@ -37,6 +53,8 @@ This will start:
 2. Login with default credentials:
    - **Username**: `airflow`
    - **Password**: `airflow`
+
+**Note:** Wait 1-2 minutes after starting for the webserver to be fully ready.
 
 ### 3. Trigger the Pipeline
 
