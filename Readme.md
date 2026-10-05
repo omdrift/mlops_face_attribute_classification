@@ -3,7 +3,9 @@
 A complete MLOps pipeline for face attribute classification using deep learning. This project implements a multi-head CNN model to predict facial attributes including beard, mustache, glasses, hair color, and hair length from face images.
 
 ## Demo : 
-- [▶️ Voir la démonstration](./demo-readme.webm)
+
+[Demo](https://github.com/user-attachments/assets/b356ea14-4005-4326-9c59-d039c01841a4)
+
 ## Table of Contents
 
 - [Project Overview](#project-overview)
