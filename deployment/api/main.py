@@ -122,16 +122,15 @@ async def search_images(search_request: SearchRequest):
    )
 
 
-@app.get("/api/images/{filename}")
+@app.get("/api/images/{filename:path}")
 async def get_image(filename: str):
-   """Serve an image from the data directory"""
-   image_path = os.path.join(DATA_DIR, filename)
-   
-   if not os.path.exists(image_path):
-       raise HTTPException(status_code=404, detail="Image not found")
-   
-   return FileResponse(image_path)
-
+    """Serve an image from the data directory"""
+    image_path = os.path.join(DATA_DIR, filename)
+    
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
+    
+    return FileResponse(image_path)
 
 @app.post("/api/predict", response_model=PredictionResult)
 async def predict_attributes(file: UploadFile = File(...)):
