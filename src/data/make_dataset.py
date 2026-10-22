@@ -1,174 +1,73 @@
-"""
-Préparation des données d'entraînement depuis data/raw/
-"""
-import numpy as np
-import pandas as pd
-import cv2
-import torch
-import os
-from tqdm import tqdm
+"""Prepare separate tensors from audited, frozen CSV manifests."""
+import argparse
+import hashlib
 from pathlib import Path
 
-# Config
-RAW_DIR = "data/raw"
-LABEL_CSV = "data/annotations/mapped_train.csv"
-OUTPUT_DIR = "data/processed"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+import cv2
+import numpy as np
+import torch
 
-#  Compteurs de debug
-stats = {
-    'total': 0,
-    'not_found': 0,
-    'decode_failed': 0,
-    'crop_failed': 0,
-    'success': 0
-}
+from src.data.dataset import ImageDataset
+from src.data.preprocessing import PREPROCESS_VERSION, array_hash, preprocess_image
+from src.data.splits import LABEL_COLUMNS, PARTITIONS, file_hash, image_index, load_splits, resolve_image
 
 
-def preprocess_image(img, size=64):
-    """Prétraite une image avec gestion d'erreurs"""
-    
-    if img is None:
-            return None
-
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)[1]
-    coords = cv2.findNonZero(thresh)
-        
-    if coords is not None:
-            x, y, w, h = cv2.boundingRect(coords)
-            cropped = img[y:y+h, x:x+w]
-    else:
-            # Pas de contour détecté, prendre l'image entière
-            cropped = img
-        
-    resized = cv2.resize(cropped, (size, size))
-    return resized.astype("float32") / 255.0
+def tensor_digest(images, labels):
+    return hashlib.sha256((array_hash(images.cpu().numpy()) + array_hash(labels.cpu().numpy())).encode()).hexdigest()
 
 
-def find_image_in_raw(filename, raw_dir):
-    """
-    Cherche une image dans data/raw et ses sous-dossiers
-    Retourne le chemin complet si trouvé, None sinon
-    """
-    raw_path = Path(raw_dir)
-    
- # Extract lot from filename (e.g., 's1' from 's1_00000.png')
-    # The lot is the prefix before the first underscore and after 's'
-    lot = filename.split('_')[0] if '_' in filename else None
+def process_training_data(raw_dir="data/raw", splits_dir="data/splits", output_dir="data/processed"):
+    partitions, metadata = load_splits(splits_dir)
+    index = image_index(raw_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for name, df in partitions.items():
+        images = []
+        for row in df.itertuples(index=False):
+            path = resolve_image(row.filename, raw_dir, index)
+            if file_hash(path) != row.sha256:
+                raise ValueError(f"Image changed after duplicate audit: {row.filename}")
+            image = preprocess_image(cv2.imread(str(path)))
+            if array_hash(image) != row.input_sha256:
+                raise ValueError(f"Preprocessing changed after duplicate audit: {row.filename}")
+            images.append(image)
+        x = torch.from_numpy(np.stack(images)).permute(0, 3, 1, 2).contiguous()
+        y = torch.from_numpy(df[LABEL_COLUMNS].to_numpy(dtype=np.int64))
+        bundle = {"X": x, "y": y, "filenames": df.filename.tolist(), "partition": name,
+                  "split_id": metadata["split_id"], "preprocess_version": PREPROCESS_VERSION,
+                  "tensors_sha256": tensor_digest(x, y)}
+        temporary = output_dir / f"{name}.pt.tmp"
+        torch.save(bundle, temporary)
+        temporary.replace(output_dir / f"{name}.pt")
+    return metadata
 
-    if lot:
-        # Construct path as: data/raw/{lot}/{filename}
-        full_path = raw_path / lot / filename
-        if full_path.exists():
-            return str(full_path)
 
-    # Fallback: try direct path in case structure is different
-    full_path = raw_path / filename
-    if full_path.exists():
-        return str(full_path)
+def load_partition(name, processed_dir="data/processed", splits_dir="data/splits"):
+    if name not in PARTITIONS:
+        raise ValueError(f"Unknown partition: {name}")
+    partitions, metadata = load_splits(splits_dir)
+    bundle = torch.load(Path(processed_dir) / f"{name}.pt", map_location="cpu", weights_only=True)
+    frame = partitions[name]
+    if bundle.get("split_id") != metadata["split_id"] or bundle.get("partition") != name:
+        raise ValueError("Processed partition does not match the frozen split")
+    if bundle.get("preprocess_version") != PREPROCESS_VERSION:
+        raise ValueError("Preprocessing version mismatch")
+    if bundle["filenames"] != frame.filename.tolist() or not np.array_equal(bundle["y"].numpy(), frame[LABEL_COLUMNS]):
+        raise ValueError("Misaligned filenames or labels in processed data")
+    if bundle.get("tensors_sha256") != tensor_digest(bundle["X"], bundle["y"]):
+        raise ValueError("Processed tensors have been modified")
+    if len(bundle["X"]) != len(frame) or not torch.isfinite(bundle["X"]).all():
+        raise ValueError("Invalid image tensors")
+    return ImageDataset(bundle["X"], bundle["y"], is_preprocessed=True), bundle, metadata
 
-def process_training_data():
-    print("="*60)
-    print("PRÉPARATION DU LOT S1 (TRAINING)")
-    print("="*60)
-    
-    # 1. Lire les labels
-    print(f"\n Chargement des annotations: {LABEL_CSV}")
-    df = pd.read_csv(LABEL_CSV)
-    
-    # Filtrer uniquement S1 pour l'entraînement
-    stats['total'] = len(df)
-    
-    print(f"   Total annotations: {len(df)}")
-    print(f"   Annotations : {len(df)}")
-    print(f"   Lots présents dans le CSV: {sorted(df['filename'].str[:2].unique())}")
-    
-    images_list = []
-    labels_list = []
-    missing_files = []
-    failed_files = []
-    
-    # 2. Créer un index des fichiers dans data/raw
-    print(f"\n Scan du dossier: {RAW_DIR}")
-    raw_path = Path(RAW_DIR)
-    
-    # Lister tous les fichiers .png dans raw/ et ses sous-dossiers
-    all_files = {}
-    for img_path in raw_path.rglob("*.png"):
-        all_files[img_path.name] = str(img_path)
-    
-    print(f"   Fichiers PNG trouvés: {len(all_files)}")
-    print(f"   Exemples: {list(all_files.keys())[:5]}")
-    
-    # 3. Traiter chaque annotation S1
-    print(f"\n  Traitement des images S1...")
-    
-    for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing"):
-        filename = row['filename']
-        
-        # Chercher le fichier dans l'index
-        if filename not in all_files:
-            stats['not_found'] += 1
-            missing_files.append(filename)
-            continue
-        
-        img_path = all_files[filename]
-        
-        try:
-            # Lire l'image
-            img = cv2.imread(img_path)
-            
-            if img is None:
-                stats['decode_failed'] += 1
-                failed_files.append(f"{filename} (lecture échouée)")
-                continue
-            
-            # Prétraiter (crop + resize)
-            processed = preprocess_image(img, size=64)
-            
-            if processed is None:
-                stats['crop_failed'] += 1
-                failed_files.append(f"{filename} (prétraitement échoué)")
-                continue
-            
-            # Ajouter à la liste
-            images_list.append(processed)
-            labels_list.append([
-                row['beard'], 
-                row['mustache'], 
-                row['glasses_binary'],
-                row['hair_color_label'], 
-                row['hair_length']
-            ])
-            stats['success'] += 1
-            
-        except Exception as e:
-            stats['decode_failed'] += 1
-            failed_files.append(f"{filename} (erreur: {str(e)})")
-    
-    # 4. Sauvegarder
-    if len(images_list) > 0:
-        print(f"\n Sauvegarde des données...")
-        X = torch.tensor(np.array(images_list)).permute(0, 3, 1, 2)  # (N, C, H, W)
-        y = torch.tensor(np.array(labels_list), dtype=torch.long)
-        
-        output_path = os.path.join(OUTPUT_DIR, "train_data_s1.pt")
-        torch.save({
-            'X': X, 
-            'y': y,
-            'stats': stats,
-            'filenames': df['filename'].tolist()
-        }, output_path)
-        
-        print(f" Sauvegardé: {output_path}")
-        print(f"   Shape X: {X.shape}")
-        print(f"   Shape y: {y.shape}")
-    else:
-        print(" Aucune image traitée!")
-        return
-    
-    
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--raw-dir", default="data/raw")
+    parser.add_argument("--splits-dir", default="data/splits")
+    parser.add_argument("--output-dir", default="data/processed")
+    process_training_data(**vars(parser.parse_args()))
+
 
 if __name__ == "__main__":
-    process_training_data()
+    main()

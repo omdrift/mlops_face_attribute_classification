@@ -1,0 +1,37 @@
+{
+  "status": "archived_validation_only",
+  "source": "metrics/legacy_validation_metrics.json",
+  "independent_test": false,
+  "attributes": {
+    "beard": {
+      "accuracy": 0.9985717686265175,
+      "macro_f1": 0.9984097281282414,
+      "support": 4201,
+      "errors": 6
+    },
+    "mustache": {
+      "accuracy": 0.9976196143775291,
+      "macro_f1": 0.9969952456073795,
+      "support": 4201,
+      "errors": 10
+    },
+    "glasses": {
+      "accuracy": 0.9985717686265175,
+      "macro_f1": 0.9985691709297494,
+      "support": 4201,
+      "errors": 6
+    },
+    "hair_color": {
+      "accuracy": 0.9973815758152821,
+      "macro_f1": 0.9968914721948,
+      "support": 4201,
+      "errors": 11
+    },
+    "hair_length": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "support": 4201,
+      "errors": 0
+    }
+  }
+}
