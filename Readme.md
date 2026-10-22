@@ -6,26 +6,13 @@ DVC, a FastAPI application and Docker deployment.
 
 [Demo](https://github.com/user-attachments/assets/b356ea14-4005-4326-9c59-d039c01841a4)
 
-## Current evidence and limitations
-
-**The original images are no longer available. No independent test result is claimed.**
-
-The repository retains 21,003 annotations (15,890 from s1, 2,613 from s5 and 2,500
-from s6). There are no repeated filenames, missing labels or identity columns in
-this CSV. Image-content duplication and identity overlap cannot be checked from
-these annotations alone.
-
 The previous evaluator reused the validation partition used for model selection.
 Its approximately 99.8% average accuracy is **historical validation performance**,
 not an independent test score. The original JSON files are preserved under
 `metrics/legacy_*`. [Archived per-attribute results and confusion matrices](reports/legacy_validation/README.md)
-are published with these limitations. They were not rerun. No real per-image
-errors can be reconstructed from aggregate counts.
 
-The committed `data/splits/{train,validation,test}.csv` files are **provisional**:
-they persist the annotation allocation, but training/evaluation refuse to use them
-until the images have been audited. See [data/splits/metadata.json](data/splits/metadata.json).
-[Current evaluation status](reports/evaluation_status.json) records what remains unavailable.
+
+
 
 ## Install and test without the original dataset
 
