@@ -28,3 +28,14 @@ UTC datetime construction. They do not fail the tests.
 No training or testing on the original face dataset was performed: its images
 are unavailable. No independent model-performance claim follows from these checks.
 Python 3.10 is configured in CI but was not executed in this local environment.
+
+## Hosted CI status
+
+The GitHub Actions runs for this change failed before any setup, installation or
+test step started. GitHub reported an account-level restriction preventing jobs
+from starting. This does not establish a hosted test failure or success.
+The account restriction must be resolved before the Python 3.10/3.12 CI matrix
+can execute. The local installed-wheel verification above remains valid.
+
+- [CI run](https://github.com/omdrift/mlops_face_attribute_classification/actions/runs/39705380337)
+- [DVC graph check run](https://github.com/omdrift/mlops_face_attribute_classification/actions/runs/39705380378)
