@@ -1,63 +1,57 @@
 stages:
   prepare_train:
-    cmd: python src/data/make_dataset.py
+    cmd: python -m src.data.make_dataset
     deps:
       - data/raw
-      - data/annotations/mapped_train.csv
+      - data/splits
       - src/data/make_dataset.py
+      - src/data/preprocessing.py
+      - src/data/splits.py
     outs:
-      - data/processed/train_data_s1.pt
+      - data/processed/train.pt
+      - data/processed/validation.pt
+      - data/processed/test.pt
 
   hyperopt:
-    cmd: python src/training/hyperopt_search.py --max-evals 10
+    cmd: python -m src.training.hyperopt_search --max-evals ${hyperopt.max_evals} --epochs ${hyperopt.epochs}
     deps:
-      - data/processed/train_data_s1.pt
+      - data/processed/train.pt
+      - data/processed/validation.pt
+      - data/splits
       - src/training/hyperopt_search.py
+      - src/training/train.py
       - src/models/architecture.py
       - src/training/loops.py
-    params:
-      - hyperopt.max_evals
     outs:
       - src/training/hyperopt_params.json
 
   train:
-    cmd: python src/training/train.py
+    cmd: python -m src.training.train --epochs ${train.epochs} --batch-size ${train.batch_size} --hyperopt-params src/training/hyperopt_params.json
     deps:
-      - data/processed/train_data_s1.pt
+      - data/processed/train.pt
+      - data/processed/validation.pt
+      - data/splits
       - src/training/train.py
-      - src/training/hyperopt_params.json  # Dépend du résultat de hyperopt
+      - src/training/hyperopt_params.json
       - src/models/architecture.py
       - src/training/loops.py
-    params:
-      - train.epochs
-      - train.batch_size
     outs:
       - models/best_model.pth
+      - metrics/training_curves.png
     metrics:
       - metrics/train_metrics.json:
           cache: false
-  evaluate:
-    cmd: python src/training/evaluate.py
-    deps:
-      - models/best_model.pth
-      - data/processed/train_data_s1.pt
-      - src/training/evaluate.py
-    params:
-      - evaluate.test_size
-      - evaluate.random_state
-    metrics:
-      - metrics/eval_metrics.json:
-          cache: false
 
   inference_batches:
-    cmd: python src/inference/batch_inference.py
+    cmd: python -m src.inference.batch_inference
     deps:
       - models/best_model.pth
       - data/raw
       - src/inference/batch_inference.py
       - data/annotations/mapped_train.csv
-    params:
-      - inference.batch_size
     outs:
       - outputs/:
           cache: false
+
+# Final test is a separate, manual action:
+# python -m src.training.evaluate

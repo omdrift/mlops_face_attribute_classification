@@ -14,12 +14,12 @@ class ImageDataset(Dataset):
         """
         if is_preprocessed:
             # Déjà au format (N, C, H, W), juste convertir en tensor
-            self.images = torch.tensor(images, dtype=torch.float32)
+            self.images = torch.as_tensor(images, dtype=torch.float32)
         else:
             # Format (N, H, W, C) -> (N, C, H, W)
-            self.images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2)
+            self.images = torch.as_tensor(images, dtype=torch.float32).permute(0, 3, 1, 2)
         
-        self.labels = torch.tensor(labels, dtype=torch.long)
+        self.labels = torch.as_tensor(labels, dtype=torch.long)
         self.transform = transform
 
     def __len__(self):

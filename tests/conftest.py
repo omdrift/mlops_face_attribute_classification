@@ -58,3 +58,6 @@ def sample_numpy_labels():
         [1, 0, 1, 3, 0],
         [0, 1, 0, 4, 1],
     ], dtype=np.int64)
+
+# Small CPU fixtures run faster without a large OpenMP thread pool.
+torch.set_num_threads(1)

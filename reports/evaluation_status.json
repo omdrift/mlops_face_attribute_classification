@@ -1,0 +1,16 @@
+{
+  "status": "not_run",
+  "independent_test": false,
+  "reason": "Original images are no longer available; no trained checkpoint is tracked.",
+  "split_status": "provisional",
+  "split_id": "6e661b1bcef307253905e0b959a8a2e1c3cf2b3ce45d556c86985a7dace2c7fc",
+  "provisional_partition_sizes": {
+    "train": 14701,
+    "validation": 3151,
+    "test": 3151
+  },
+  "image_duplicates_checked": false,
+  "identity_separation_established": false,
+  "real_test_error_examples_available": false,
+  "historical_results": "reports/legacy_validation/README.md"
+}

@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from airflow.operators.email import EmailOperator
 
 # Default arguments for the DAG
 default_args = {
@@ -28,7 +27,7 @@ def notify_completion(**context):
     execution_date = context['execution_date']
     print(f" ML Pipeline completed successfully!")
     print(f" Execution date: {execution_date}")
-    print(f" All stages finished: prepare_data → hyperopt → train → evaluate → inference")
+    print(f" All stages finished: prepare_data → hyperopt → train → inference")
     return "Pipeline completed successfully"
 
 
@@ -63,12 +62,7 @@ with DAG(
         dag=dag,
     )
 
-    # Task 4: Evaluate model on test set
-    evaluate_model = BashOperator(
-        task_id='evaluate_model',
-        bash_command=f'cd {PROJECT_ROOT} && dvc repro evaluate',
-        dag=dag,
-    )
+    # Reserved test evaluation is deliberately manual; see src.training.evaluate.
 
     # Task 5: Run batch inference on all data
     batch_inference = BashOperator(
@@ -88,8 +82,8 @@ with DAG(
     # Define task dependencies
     # Linear flow: prepare → hyperopt → train → [evaluate, inference] → notify
     prepare_data >> hyperopt_search >> train_model
-    train_model >> [evaluate_model, batch_inference]
-    [evaluate_model, batch_inference] >> notify_completion_task
+    train_model >> batch_inference
+    batch_inference >> notify_completion_task
 
 
 # Optional: Add a separate DAG for retraining only (no hyperopt)
@@ -108,12 +102,6 @@ with DAG(
         bash_command=f'cd {PROJECT_ROOT} && dvc repro train',
     )
 
-    # Task 2: Evaluate
-    retrain_evaluate = BashOperator(
-        task_id='evaluate_model',
-        bash_command=f'cd {PROJECT_ROOT} && dvc repro evaluate',
-    )
-
     # Task 3: Inference
     retrain_inference = BashOperator(
         task_id='batch_inference',
@@ -128,7 +116,7 @@ with DAG(
     )
 
     # Dependencies
-    retrain_model >> [retrain_evaluate, retrain_inference] >> retrain_notify
+    retrain_model >> retrain_inference >> retrain_notify
 
 
 # Optional: Add a DAG for inference only
